@@ -1,5 +1,8 @@
 # Xray Core DevKit
 
+[Documentation](docs/README.md) · [Installation](docs/INSTALLATION.md) ·
+[Download ZIP](https://github.com/svlavr/xray-core-devkit/archive/refs/heads/main.zip)
+
 The complete configured Codex toolkit we use for Xray-core development: skills,
 specialized agents, Go code intelligence, MCP lifecycle control, source accounting,
 review, Android artifact qualification, guarded source exports and external
@@ -47,7 +50,14 @@ The toolkit targets the `github.com/xtls/xray-core` Go module, including forks t
 retain that module path. It shares the current Windows/Linux tool arrangement;
 macOS process supervision and other clients are not qualified by this project.
 
-From this downloaded repository:
+Clone the toolkit, or extract the ZIP and open its directory. With Git:
+
+```powershell
+git clone https://github.com/svlavr/xray-core-devkit.git
+cd xray-core-devkit
+```
+
+From the toolkit directory:
 
 ```powershell
 python devkit.py verify
@@ -90,6 +100,7 @@ configuration, roles or MCP launchers changed.
 
 ## Documentation
 
+- [Documentation home and component map](docs/README.md)
 - [Project scope and authority](docs/PROJECT_SCOPE.md)
 - [Workflow, evidence and validation](docs/WORKFLOW.md)
 - [Checkout configuration](docs/CONFIGURATION.md)
@@ -102,6 +113,16 @@ configuration, roles or MCP launchers changed.
 The skills apply the user's task and source contracts; they do not invent a
 product architecture or authorize publication. Source, host, device, network,
 performance and release evidence remain separate.
+
+## Included tests
+
+The toolkit ships its own regression tests in `.agents/scripts/test_*.py` and
+`tests/`: configuration, analysis evidence, MCP transport and lifecycle,
+orchestration, export guards, installation, updates and distribution auditing.
+See [maintenance checks](docs/MAINTENANCE.md#verify-a-change) for the commands and
+prerequisites. Xray runtime tests belong to the source revision they exercise;
+this tooling distribution does not include a downstream project's runtime suite
+or private test inputs.
 
 ## License
 
