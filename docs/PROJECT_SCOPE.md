@@ -1,7 +1,7 @@
 # Supplying a project scope
 
-The devkit distributes the complete configured Xray Codex workflow: thirteen
-skills, eleven named roles, Windows analysis/session helpers, source accounting,
+The devkit distributes the complete configured Xray Codex workflow: eighteen
+skills, nineteen named roles, Windows analysis/session helpers, source accounting,
 filtered export/CI, and optional Gas City/Beads workers. It is an independent
 public tooling project. It contains no product runtime, proprietary module
 contracts, project stage history, source acceptance or publication destination.

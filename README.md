@@ -4,8 +4,8 @@
 [File map](docs/FILES.md) ·
 [Download ZIP](https://github.com/svlavr/xray-core-devkit/archive/refs/heads/main.zip)
 
-The complete configured Codex toolkit we use for Xray-core development: thirteen
-skills, eleven specialized agent roles, Go code intelligence, MCP process control,
+The complete configured Codex toolkit we use for Xray-core development: eighteen
+skills, nineteen specialized agent roles, Go code intelligence, MCP process control,
 source accounting, review, Android artifact qualification, guarded source exports
 and Gas City orchestration.
 
@@ -87,12 +87,22 @@ source task, behavior contract, baseline, write set and Git policy.
 
 - **Skills and roles:** startup, research, Go analysis, implementation,
   orchestration, review, threat modeling, Android qualification, checkpoint,
-  public CI and handoff. [All thirteen skills and eleven roles](docs/README.md#skills-and-roles)
+  public CI and handoff. [All eighteen skills and nineteen roles](docs/README.md#skills-and-roles)
   remain available.
 - **Complete delivery:** compare practical implementations, carry justified
   behavior through its real consumer, and review behavior and simplicity.
   Requirements can change on evidence; unfinished agreed work stays visible.
   [Delivery workflow](docs/WORKFLOW.md#practical-solution-research-and-complete-delivery)
+- **Design and experiments:** complete alternatives, independent design criticism,
+  factual research, acceptance design and actual owned experiments feed back
+  into implementation and real-consumer checks. Workflow evaluation uses
+  executable outcomes and evaluator controls, without forced novelty or quotas.
+  [Invention, criticism and experiments](docs/WORKFLOW.md#invention-criticism-and-experiments)
+- **Runtime specialties:** selected protocol/peer interoperability, lifecycle and
+  concurrency, reachable security, Go/OS/ABI qualification and measured performance
+  feed real-consumer checks. Load only the implicated methods; no automatic full
+  roster, build matrix or device proof.
+  [Runtime and protocol specialists](docs/WORKFLOW.md#runtime-and-protocol-specialists)
 - **Model routing:** Luna High for narrow exploration, Sol 6.1 High for ordinary
   roles, and one Astra High adviser for a named technical question unresolved by
   Sol. The primary model stays the user's choice. Native capacity is 23, subject

@@ -32,7 +32,7 @@ class LanguageInheritanceTests(unittest.TestCase):
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text('fixture authority')
             with patch.object(workspace, 'ROOT', root):
-                self.assertEqual(workspace.validate()['roles'], 11)
+                self.assertEqual(workspace.validate()['roles'], 19)
                 role = root/'.codex/agents/mu_reviewer.toml'
                 role.write_text(role.read_text().replace(WORKER_INSTRUCTIONS, 'Answer the coordinator in Russian.'))
                 with self.assertRaisesRegex(RuntimeError, 'language policy mismatch'):

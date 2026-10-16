@@ -43,7 +43,7 @@ class WorkspaceTests(unittest.TestCase):
         return value
 
     def setup(self, **kwargs):
-        with patch.object(workspace, 'validate', return_value={'roles': 11, 'skills': 13}):
+        with patch.object(workspace, 'validate', return_value={'roles': 19, 'skills': 18}):
             return workspace.setup(self.root, catalog=self.root / 'absent-catalog.json', **kwargs)
 
     def test_fresh_official_checkout_without_private_context_or_named_remotes(self):
@@ -264,7 +264,7 @@ class ConfigurationTests(unittest.TestCase):
             role.write_text('name="source_helper"\ndescription="Source helper"\ndeveloper_instructions="Read source"\n')
             with patch.object(workspace, 'ROOT', root):
                 result = workspace.validate()
-                self.assertEqual((result['skills'], result['roles']), (13, 11))
+                self.assertEqual((result['skills'], result['roles']), (18, 19))
                 self.assertEqual(result['additional_skills'], ['source-local-helper'])
                 self.assertEqual(result['additional_roles'], ['source_helper'])
                 self.assertNotIn('[agents.source_helper]', workspace.configuration('python'))

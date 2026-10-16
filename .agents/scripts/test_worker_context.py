@@ -43,13 +43,21 @@ class WorkerGuardTests(unittest.TestCase):
             self.assertIn(str(tools),parsed['mcp_servers']['xray_gopls_worker']['args'][2])
             self.assertFalse(parsed['agents']['enabled'])
             self.assertNotIn('model',parsed)
-            self.assertEqual(set(parsed['mcp_servers']),{'xray_gopls_worker','context7','grep_app'})
+            self.assertEqual(set(parsed['mcp_servers']),{'xray_gopls_worker','context7','grep_app','exa_public_research'})
             self.assertEqual(parsed['mcp_servers']['context7'],{
                 'enabled':True,'url':'https://mcp.context7.com/mcp',
                 'startup_timeout_sec':60,'tool_timeout_sec':60})
             self.assertEqual(parsed['mcp_servers']['grep_app'],{
                 'enabled':True,'default_tools_approval_mode':'auto','url':'https://mcp.grep.app',
                 'enabled_tools':['searchGitHub'],'startup_timeout_sec':60,'tool_timeout_sec':60})
+            self.assertEqual(parsed['mcp_servers']['exa_public_research'],{
+                'enabled':True,
+                'url':'https://mcp.exa.ai/mcp?tools=web_search_exa,web_fetch_exa',
+                'enabled_tools':['web_search_exa','web_fetch_exa'],
+                'startup_timeout_sec':45,'tool_timeout_sec':45})
+            self.assertIn('Exa web_search_exa requires query and objective',parsed['developer_instructions'])
+            self.assertIn('never send private source, contracts, credentials or logs',parsed['developer_instructions'])
+            self.assertIn('parent session permissions and approvals',parsed['developer_instructions'])
             self.assertIn('docs/PROJECT_SCOPE.md',guidance)
             self.assertNotIn('.private',guidance)
             self.assertIn('enabled = false',guidance)
@@ -58,6 +66,10 @@ class WorkerGuardTests(unittest.TestCase):
                 '[mcp_servers.grep_app]\nenabled = true\ndefault_tools_approval_mode = "auto"',
                 '[mcp_servers.grep_app]\nenabled = false\ndefault_tools_approval_mode = "deny"'
                 '\nbearer_token_env_var = "OLD_SEARCH_TOKEN"\ndisabled_tools = ["searchGitHub"]')
+            legacy=legacy.replace(
+                '[mcp_servers.exa_public_research]\nenabled = true',
+                '[mcp_servers.exa_public_research]\nenabled = false\ndefault_tools_approval_mode = "deny"'
+                '\nbearer_token_env_var = "OLD_EXA_TOKEN"\ndisabled_tools = ["web_fetch_exa"]')
             (repo/'.codex/config.toml').write_text(legacy,encoding='utf-8',newline='\n')
             with patch.object(worker_context.subprocess,'check_output',side_effect=git):
                 worker_context.setup(repo,'base',str(queue),tools)

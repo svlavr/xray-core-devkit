@@ -57,7 +57,11 @@ def setup(repo, base, queue_origin, tools):
         'local worker commits are handoff artifacts, never publish to GitHub or spawn nested workers. '
         'Run validation through the deployed resource_guard.py with --cwd pointing to this checkout '
         'and --transient pointing to its .local/host/transient, followed by -- and the command. '
-        'Keep logs and output artifacts outside that disposable scratch; preserve shared Go caches.')
+        'Keep logs and output artifacts outside that disposable scratch; preserve shared Go caches. '
+        'Remote Context7, grep.app and exa_public_research receive public identifiers/questions/URLs only; '
+        'never send private source, contracts, credentials or logs. Exa web_search_exa requires query and objective; '
+        'web_fetch_exa takes urls. The two-tool Exa profile adds no model execution or permission authority; '
+        'actual access follows the parent session permissions and approvals.')
     config='developer_instructions = '+json.dumps(guidance,ensure_ascii=False)+'\n\n[agents]\nenabled = false\n\n[mcp_servers.xray_gopls_worker]\nenabled = true\n'
     config+='command = '+json.dumps(sys.executable,ensure_ascii=False)+'\nargs = '+json.dumps(args,ensure_ascii=False)+'\n'
     config+='startup_timeout_sec = 60\ntool_timeout_sec = 240\n'
@@ -65,6 +69,7 @@ def setup(repo, base, queue_origin, tools):
     config+='[mcp_servers.xray_gopls_worker.env]\nGOOS = '+json.dumps(profile,ensure_ascii=False)+'\nGOARCH = "amd64"\nCGO_ENABLED = "0"\nGOFLAGS = "-mod=readonly"\nGOMAXPROCS = "2"\n'
     config+='\n[mcp_servers.context7]\nenabled = true\nurl = "https://mcp.context7.com/mcp"\nstartup_timeout_sec = 60\ntool_timeout_sec = 60\n'
     config+='\n[mcp_servers.grep_app]\nenabled = true\ndefault_tools_approval_mode = "auto"\nurl = "https://mcp.grep.app"\nenabled_tools = ["searchGitHub"]\nstartup_timeout_sec = 60\ntool_timeout_sec = 60\n'
+    config+='\n[mcp_servers.exa_public_research]\nenabled = true\nurl = "https://mcp.exa.ai/mcp?tools=web_search_exa,web_fetch_exa"\nenabled_tools = ["web_search_exa", "web_fetch_exa"]\nstartup_timeout_sec = 45\ntool_timeout_sec = 45\n'
     (repo/'.codex').mkdir(exist_ok=True)
     (repo/'.codex/config.toml').write_text(config,encoding='utf-8',newline='\n')
     return {'status':'WORKER_CONFIGURED','root':str(repo),'base':base_sha,'profile':profile}

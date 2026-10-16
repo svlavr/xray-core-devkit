@@ -11,7 +11,7 @@ Run setup from that installed source root, as in
 Edit the maintained source of a setting, then regenerate and start fresh
 processes. The [file map](FILES.md) lists every component; the main inputs are:
 
-- `.codex/agents/*.toml`: eleven role models, effort, role intent and task rules.
+- `.codex/agents/*.toml`: nineteen role models, effort, role intent and task rules.
 - `.agents/orchestration/context.json`: nominal context window, effective
   percentage, compaction percentage, scope and required model family.
 - `.agents/scripts/language_policy.py`: shared primary/worker language text.
@@ -138,19 +138,34 @@ The generated config sets `features.multi_agent_v2 = true`, `agents.enabled =
 true`, default subagent model `gpt-6.1-sol`, default subagent effort `high`,
 `max_concurrent_threads_per_session = 23` and `interrupt_message = true`.
 Capacity remains subject to observed session/host limits. Role paths refer to
-all eleven distributed TOML files; each disables nested native workers.
+all nineteen distributed TOML files; each disables nested native workers.
 
-Validation requires the complete managed set of thirteen skills and eleven roles.
+Validation requires the complete managed set of eighteen skills and nineteen roles.
 Source-owned extra skills/roles are preserved and reported separately as
 `additional_skills` and `additional_roles`. The generated layer explicitly
-registers only the eleven managed roles; source-owned roles remain subject to
+registers only the nineteen managed roles; source-owned roles remain subject to
 Codex's native discovery rather than being rewritten into the managed config.
 
-The thirteen skills and eleven roles are retained. `mu_explorer` uses
+The eighteen skills and nineteen roles are retained. `mu_explorer` uses
 `gpt-6-luna` high, ordinary worker/review roles use `gpt-6.1-sol` high, and
 `mu_deep_reviewer` uses `gpt-6-astra` high for one evidenced unresolved question.
 Main's model and effort are not overridden. Internal tasks, reports and docs use
 English; direct primary-coordinator replies use Russian.
+
+The added `mu_innovator`, `mu_design_critic`, `mu_test_architect` and
+`mu_agent_evaluator` all use Sol 6.1 high with nesting disabled. Existing
+`mu_go_worker` supports explicitly assigned experimenter mode. The workflow and
+portable authority boundary are in
+[invention, criticism and experiments](WORKFLOW.md#invention-criticism-and-experiments).
+External advisory competencies reuse `kind=review`; actual experiments use
+`kind=implement`. No model pool or scheduler is added.
+
+`mu_protocol_reviewer`, `mu_concurrency_reviewer`, `mu_security_reviewer` and
+`mu_build_qualifier` also use Sol 6.1 high with nesting disabled. Their selected
+methods are in [runtime and protocol specialists](WORKFLOW.md#runtime-and-protocol-specialists).
+The existing performance role supports measurement design or independent
+result review; the critical reviewer retains cross-boundary duties. These
+competencies select no automatic full roster, OS matrix or device acceptance.
 
 Role `sandbox_mode` is `read-only` except `mu_go_worker`, which declares
 `workspace-write`. These values express task intent and do not enforce a
@@ -211,6 +226,21 @@ credentials or logs. Review the source revision, actual caller and applicable
 license before adopting a result. Service approval settings do not override
 the parent session's effective permissions. Fresh sessions adopt regenerated
 configuration; existing sessions may retain their prior MCP catalog.
+
+Generated external workers additionally enable `exa_public_research` at
+`https://mcp.exa.ai/mcp?tools=web_search_exa,web_fetch_exa`, with only
+`web_search_exa` and `web_fetch_exa` and 45-second startup/tool limits. The Exa
+table sets no approval override; inherited/default session approval settings apply.
+Search takes required `query` and `objective`; fetch takes
+`urls`. This is public retrieval only: never send private queries, source,
+contracts, credentials or logs. No token/environment/auth or model-execution
+tool is added. Actual access still follows parent permissions and approvals.
+Primary MCP generation stays unchanged and uses its existing web capabilities.
+The two-tool endpoint was qualified through bounded native Codex streamable
+HTTP search/fetch; that is not sustained availability, a fixed anonymous quota
+or proof for every HTTP client/host. Regenerated profile wiring and actual tool
+operation remain separate observations for each selected worker environment.
+
 Repomix uses the managed relay and a sandbox rooted at the selected checkout;
 that root restriction is not a public-disclosure allowlist.
 

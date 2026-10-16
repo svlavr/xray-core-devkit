@@ -29,6 +29,19 @@ task through final verification; revise requirements on evidence openly rather
 than silently leaving agreed functions for a future task. This also applies to
 repairs and refactoring: simplicity preserves the required outcome.
 
+Use `xray-design-exploration` before selecting an uncertain design and
+`xray-decision-experiment` for an explicitly assigned worker experiment. Main
+feeds actual results to the creator/critic and selects implementation; a design
+report or successful scratch experiment does not close the capability. An
+independent `mu_test_architect` can design real-consumer acceptance. Use
+`xray-agent-evaluation` when completion or workflow claims need adjudication.
+
+Changed config/wire/peer paths use `xray-protocol-compatibility`. Lifecycle,
+trust, target/ABI and cost questions select only the implicated
+`xray-runtime-qualification` mode and specialist; critical review retains
+interacting boundary risks. Existing workers perform assigned actual checks,
+without an automatic full roster, platform matrix or new native owner.
+
 Main follows CODEX_PACK for early independent lanes, disjoint workers and stable
 independent review. Workers are not alone and preserve others' edits. Native
 children never change Git; external workers with owner-generated worker context

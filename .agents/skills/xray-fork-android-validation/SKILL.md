@@ -10,6 +10,12 @@ current host context and exact source/build/artifact hashes.
 Use only when a real accepted Android-targeted core artifact exists or the owner
 explicitly requests its validation. Source-only/process work does not trigger it.
 
+Use `mu_build_qualifier` and `xray-runtime-qualification`'s build reference for
+exact source/toolchain/target/artifact/symbol evidence. Select lifecycle or trust
+specialists only where implicated. They do not replace the actual consumer's
+native load, binding or device checks, create a downstream bridge owner, or
+turn a successful cross-build into Android/VPN/TUN acceptance.
+
 Check target ABI/API/toolchain/binding symbols and actual native loading; run
 the agreed lifecycle/cancellation/custody/resource and packet tests on the
 declared device/AVD and consumer. Preserve platform socket/protect/underlay

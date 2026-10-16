@@ -61,6 +61,16 @@ scripts. Those linked files are part of the distribution.
   compare native, direct and external implementations before choosing machinery.
 - [xray-feature-delivery](../.agents/skills/xray-feature-delivery/SKILL.md): finish
   justified consumer behavior, including integration and independent verification.
+- [xray-design-exploration](../.agents/skills/xray-design-exploration/SKILL.md):
+  complete alternatives, independent premise criticism and factual research.
+- [xray-decision-experiment](../.agents/skills/xray-decision-experiment/SKILL.md):
+  acceptance design, owned actual experiments and creator/critic feedback.
+- [xray-agent-evaluation](../.agents/skills/xray-agent-evaluation/SKILL.md):
+  executable outcome and workflow comparisons with evaluator validity checks.
+- [xray-protocol-compatibility](../.agents/skills/xray-protocol-compatibility/SKILL.md):
+  selected config/wire/transport and named-peer compatibility through its caller.
+- [xray-runtime-qualification](../.agents/skills/xray-runtime-qualification/SKILL.md):
+  progressive concurrency, security, build/ABI and measured-performance modes.
 - [xray-code-analysis](../.agents/skills/xray-code-analysis/SKILL.md): trace Go
   ownership, references, consumers and removal questions for the selected build.
 - [xray-fork-implement](../.agents/skills/xray-fork-implement/SKILL.md): implement
@@ -81,7 +91,7 @@ scripts. Those linked files are part of the distribution.
   changes, evidence and remaining gates for continuation.
 
 Main keeps the human-selected primary model and owns integration, validation
-and Git. Eleven domain roles provide bounded assignments:
+and Git. Nineteen domain roles provide bounded assignments:
 
 - [mu_explorer](../.codex/agents/mu_explorer.toml): one narrow read-only code path;
   `gpt-6-luna`, high.
@@ -91,16 +101,34 @@ and Git. Eleven domain roles provide bounded assignments:
   upstream, dependency or licensing evidence; `gpt-6.1-sol`, high.
 - [mu_solution_researcher](../.codex/agents/mu_solution_researcher.toml): practical
   implementation comparison and deciding experiments; `gpt-6.1-sol`, high.
+- [mu_innovator](../.codex/agents/mu_innovator.toml): complete technical
+  alternatives and falsifiable mechanisms; `gpt-6.1-sol`, high.
+- [mu_design_critic](../.codex/agents/mu_design_critic.toml): independent premise
+  and design criticism before implementation; `gpt-6.1-sol`, high.
+- [mu_test_architect](../.codex/agents/mu_test_architect.toml): consumer acceptance,
+  deciding experiments and evaluator controls; `gpt-6.1-sol`, high.
+- [mu_agent_evaluator](../.codex/agents/mu_agent_evaluator.toml): complete outcomes,
+  provenance and workflow evidence adjudication; `gpt-6.1-sol`, high.
+- [mu_protocol_reviewer](../.codex/agents/mu_protocol_reviewer.toml): config-to-wire
+  and peer interoperability controls; `gpt-6.1-sol`, high.
+- [mu_concurrency_reviewer](../.codex/agents/mu_concurrency_reviewer.toml): resource
+  transitions, cancellation, locks and progress guarantees; `gpt-6.1-sol`, high.
+- [mu_security_reviewer](../.codex/agents/mu_security_reviewer.toml): reachable
+  attacker input, trust boundaries and sensitive sinks; `gpt-6.1-sol`, high.
+- [mu_build_qualifier](../.codex/agents/mu_build_qualifier.toml): selected Go/OS/ABI
+  and native-consumer qualification; `gpt-6.1-sol`, high.
 - [mu_behavior_reviewer](../.codex/agents/mu_behavior_reviewer.toml): verify changed
   behavior through its real caller; `gpt-6.1-sol`, high.
 - [mu_simplicity_reviewer](../.codex/agents/mu_simplicity_reviewer.toml): challenge
   unnecessary machinery while preserving justified behavior; `gpt-6.1-sol`, high.
 - [mu_go_worker](../.codex/agents/mu_go_worker.toml): an accepted disjoint Go write
-  set and its validation; `gpt-6.1-sol`, high.
+  set and its validation, or explicitly assigned experimenter mode;
+  `gpt-6.1-sol`, high.
 - [mu_reviewer](../.codex/agents/mu_reviewer.toml): stable-diff correctness,
   regressions and focused test gaps; `gpt-6.1-sol`, high.
 - [mu_performance_reviewer](../.codex/agents/mu_performance_reviewer.toml): hot-path
-  cost, allocations, contention and bounded backpressure; `gpt-6.1-sol`, high.
+  measurement design or independent cost/load/backpressure review;
+  `gpt-6.1-sol`, high.
 - [mu_critical_reviewer](../.codex/agents/mu_critical_reviewer.toml): runtime,
   concurrency, security, Android and release review; `gpt-6.1-sol`, high.
 - [mu_deep_reviewer](../.codex/agents/mu_deep_reviewer.toml): one evidenced technical

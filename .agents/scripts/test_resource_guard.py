@@ -181,14 +181,27 @@ class ResourceTests(unittest.TestCase):
     def test_unanswered_reverse_request_has_a_deadline(self):
         pidfile=self.root/'reverse-pid'
         backend="import sys,json,os,pathlib,time\npathlib.Path("+repr(str(pidfile))+").write_text(str(os.getpid()))\nfor line in sys.stdin:\n m=json.loads(line)\n if m.get('method')=='initialize':\n  print(json.dumps({'id':m['id'],'result':{}}),flush=True)\n  print(json.dumps({'id':'unanswered','method':'roots/list'}),flush=True)\n"
-        process=self.launch_relay(backend,timeout=.5)
+        # Isolate reverse-call expiry from interpreter startup and idle eviction.
+        process=self.launch_relay(backend,timeout=2,idle=5)
+        inbox=queue.Queue()
+        def read():
+            for line in process.stdout:inbox.put(json.loads(line))
+        reader=threading.Thread(target=read,daemon=True);reader.start()
         process.stdin.write(json.dumps({'id':1,'method':'initialize'})+'\n');process.stdin.flush()
-        self.assertEqual(json.loads(process.stdout.readline())['id'],1)
-        self.assertEqual(json.loads(process.stdout.readline())['id'],'unanswered')
+        initialized=inbox.get(timeout=5)
+        self.assertEqual(initialized['id'],1)
+        self.assertIn('result',initialized)
+        self.assertNotIn('error',initialized)
+        reverse=inbox.get(timeout=5)
+        self.assertEqual(reverse['id'],'unanswered')
+        self.assertEqual(reverse['method'],'roots/list')
         self.wait_for(lambda:gone(int(pidfile.read_text())))
         process.stdin.write(json.dumps({'id':2,'method':'ping'})+'\n');process.stdin.flush()
-        self.assertEqual(json.loads(process.stdout.readline()),{'jsonrpc':'2.0','id':2,'result':{}})
+        self.assertEqual(inbox.get(timeout=5),{'jsonrpc':'2.0','id':2,'result':{}})
         self.assertTrue(gone(int(pidfile.read_text())))
+
+        process.stdin.close();process.wait(timeout=4)
+        reader.join(timeout=1);self.assertFalse(reader.is_alive())
 
     def test_catalogue_pages_and_change_notification_preserve_tool_surface(self):
         backend='''import sys,json
@@ -240,7 +253,8 @@ for line in sys.stdin:
   if first:print(json.dumps({'method':'notifications/tools/list_changed'}),flush=True);first=False
  print(json.dumps({'id':m['id'],'result':result}),flush=True)
 '''
-        process=self.launch_relay(backend,timeout=2)
+        # Keep this cache-revision test on one backend; idle eviction is tested separately.
+        process=self.launch_relay(backend,timeout=2,idle=5)
         for id,expected in [(1,None),(2,'old'),(3,'new')]:
             process.stdin.write(json.dumps({'id':id,'method':'initialize' if id==1 else 'tools/list'})+'\n');process.stdin.flush()
             while True:
@@ -249,14 +263,14 @@ for line in sys.stdin:
             if expected:self.assertEqual(message['result']['tools'][0]['name'],expected)
         process.stdin.close();process.wait(timeout=4)
 
-    def launch_relay(self, backend_text, timeout=.5):
+    def launch_relay(self, backend_text, timeout=.5, idle=.2):
         backend=self.root/'scenario.py';backend.write_text(backend_text)
         launcher=self.root/'scenario-relay.py'
         launcher.write_text("import sys\nsys.path.insert(0,sys.argv[1])\nfrom resource_guard import Relay\n"
-            "Relay([sys.executable,sys.argv[2]],sys.argv[3],idle=.2,timeout=float(sys.argv[4])).serve()\n")
+            "Relay([sys.executable,sys.argv[2]],sys.argv[3],idle=float(sys.argv[5]),timeout=float(sys.argv[4])).serve()\n")
         error_log=self.root/'scenario-errors.log'
         with error_log.open('w') as log:
-            process=subprocess.Popen([sys.executable,str(launcher),str(Path(guard.__file__).parent),str(backend),str(self.root),str(timeout)],
+            process=subprocess.Popen([sys.executable,str(launcher),str(Path(guard.__file__).parent),str(backend),str(self.root),str(timeout),str(idle)],
                 stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=log,text=True)
         process.error_log=error_log
         def cleanup():

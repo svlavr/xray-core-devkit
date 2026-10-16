@@ -98,6 +98,30 @@ queues or commits. Run Codex once to obtain its current `models_cache.json`.
 policy before admitting these settings. Unsupported access or changed context
 capabilities block setup and need an explicit policy review.
 
+## Worker public research tools
+
+Generated worker context includes checkout-bound Go semantics plus public
+Context7, grep.app and the qualified two-tool `exa_public_research` profile.
+Exa uses `https://mcp.exa.ai/mcp?tools=web_search_exa,web_fetch_exa`, exposing only
+`web_search_exa` and `web_fetch_exa` with 45-second startup/tool limits. Search
+requires `query` and `objective`; fetch takes `urls`. Submit only public
+questions, identifiers and URLs, never private source, contracts, credentials
+or logs. No extra model agent, auth token or environment setting is installed.
+The Exa table sets no approval override; inherited/default session approval
+settings and actual parent permissions govern access.
+
+The native Codex streamable HTTP search/fetch path has bounded operational
+qualification. Distinguish that from generated-profile configuration, direct
+HTTP-client behavior, workspace startup and future service availability;
+retain failed attempts rather than erasing them after a different path passes.
+There is no fixed anonymous-rate guarantee. Primary MCP settings remain
+unchanged. Verify needed operations in the actual generated worker environment
+and record its root/profile/execution identity without exporting private inputs.
+Updating the maintained worker generator requires explicit external configure
+deployment and fresh worker sessions, not a global restart or silent profile copy.
+See [MCP configuration](CONFIGURATION.md#mcp-settings) and
+[service notices](../THIRD_PARTY_NOTICES.md#public-worker-web-retrieval).
+
 ## Select a new host connection
 
 Copy [examples/orchestration.json](../examples/orchestration.json) to an ignored local editing location, choose

@@ -16,6 +16,14 @@ revise unjustified assumptions with reasons within the authorized task. Use
 `xray-solution-research` for practical implementation choices in new or existing
 code. A routine repair does not require a new formal architecture document.
 
+When assessing native/upstream compatibility, carry changed API/default/error,
+build and dependency-consumer facts into `xray-protocol-compatibility` and the
+selected build/native mode of `xray-runtime-qualification`. Test architect,
+specialists, authorized execution worker and behavior reviewer connect those
+facts to actual native/selected-extension consumers; compile success alone
+cannot establish compatibility. Public-only worker search/fetch may use Exa;
+do not send private source, contracts or logs to retrieval services.
+
 At the start of a substantial multi-owner review, split independent evidence
 questions and dispatch them together with `xray-orchestration` before reading
 every lane in main. Main owns synthesis and a separate useful lane while agents

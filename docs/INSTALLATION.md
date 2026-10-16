@@ -2,8 +2,8 @@
 
 Installation has four steps: copy the toolkit into a source checkout, provision
 analysis dependencies, generate checkout-local settings, then launch a fresh
-Codex session. The external worker runtime has its own setup. All thirteen skills,
-eleven roles and supporting workflows are included in the copy.
+Codex session. The external worker runtime has its own setup. All eighteen skills,
+nineteen roles and supporting workflows are included in the copy.
 
 ## Requirements and paths
 
@@ -68,7 +68,7 @@ preserving unrelated human text. It writes a local hash receipt at
 `.local/workspace/devkit-install.json`. It does not run setup, install packages,
 select remotes, change source files or alter global Codex/account settings.
 Source-owned extra skills and roles are preserved; validation reports them
-separately from the required thirteen skills and eleven managed roles.
+separately from the required eighteen skills and nineteen managed roles.
 
 Conflicts are checked before payload writes. Identical existing files are
 accepted; differing existing tooling is preserved and blocks the copy. There is

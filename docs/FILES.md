@@ -47,6 +47,11 @@ Each maintained `SKILL.md` has discovery metadata. Codex reads a selected skill 
 - [xray-code-analysis/SKILL.md](../.agents/skills/xray-code-analysis/SKILL.md): Go ownership/references/dependencies/removal evidence.
 - [xray-solution-research/SKILL.md](../.agents/skills/xray-solution-research/SKILL.md): practical native/direct/external implementation comparison.
 - [xray-feature-delivery/SKILL.md](../.agents/skills/xray-feature-delivery/SKILL.md): complete justified behavior through its consumer and verification.
+- [xray-design-exploration/SKILL.md](../.agents/skills/xray-design-exploration/SKILL.md): alternatives, independent design criticism, factual research and selection.
+- [xray-decision-experiment/SKILL.md](../.agents/skills/xray-decision-experiment/SKILL.md): acceptance design, owned actual execution and feedback.
+- [xray-agent-evaluation/SKILL.md](../.agents/skills/xray-agent-evaluation/SKILL.md): complete outcome comparison, evaluator validity and evidence adjudication.
+- [xray-protocol-compatibility/SKILL.md](../.agents/skills/xray-protocol-compatibility/SKILL.md): selected configuration/wire/transport/peer compatibility and network-failure controls.
+- [xray-runtime-qualification/SKILL.md](../.agents/skills/xray-runtime-qualification/SKILL.md): progressive lifecycle/security/build/performance qualification with actual consumer evidence.
 - [xray-core-start/SKILL.md](../.agents/skills/xray-core-start/SKILL.md): read-only startup/root/ref/policy reporting.
 - [xray-fork-android-validation/SKILL.md](../.agents/skills/xray-fork-android-validation/SKILL.md): accepted Android artifact/ABI/lifecycle/resource validation.
 - [xray-fork-checkpoint/SKILL.md](../.agents/skills/xray-fork-checkpoint/SKILL.md): reviewed exact-path checkpoint under human-selected Git policy.
@@ -60,6 +65,10 @@ Read these maintained references when their owning skill requests them:
 - [security-threat-model/references/output-contract.md](../.agents/skills/security-threat-model/references/output-contract.md): threat evidence/report structure.
 - [xray-fork-research/references/evidence-and-output.md](../.agents/skills/xray-fork-research/references/evidence-and-output.md): research sources/output requirements.
 - [xray-orchestration/references/parallel-batches.md](../.agents/skills/xray-orchestration/references/parallel-batches.md): advisory packet schema, verified capture, dispatch and results.
+- [xray-runtime-qualification/references/concurrency.md](../.agents/skills/xray-runtime-qualification/references/concurrency.md): resource transitions, interleavings, progress and race evidence.
+- [xray-runtime-qualification/references/security.md](../.agents/skills/xray-runtime-qualification/references/security.md): routine reachable input/trust/sink review, distinct from explicit threat modeling.
+- [xray-runtime-qualification/references/build.md](../.agents/skills/xray-runtime-qualification/references/build.md): source/target/ABI selection, native/upstream controls and artifact limits.
+- [xray-runtime-qualification/references/performance.md](../.agents/skills/xray-runtime-qualification/references/performance.md): controlled profiling, workload/load/cost attribution and correctness controls.
 
 The ten `agents/openai.yaml` files below provide skill UI labels, short descriptions, default prompts and implicit-invocation policy. Codex skill discovery consumes them; they are separate from role TOMLs. Keep them aligned when editing the owning skill's public surface:
 
@@ -74,21 +83,29 @@ The ten `agents/openai.yaml` files below provide skill UI labels, short descript
 - [xray-fork-research/agents/openai.yaml](../.agents/skills/xray-fork-research/agents/openai.yaml)
 - [xray-public-ci/agents/openai.yaml](../.agents/skills/xray-public-ci/agents/openai.yaml)
 
-`xray-orchestration`, `xray-solution-research` and `xray-feature-delivery` have no bundled `agents/openai.yaml`; their discovery metadata is in their skill frontmatter.
+`xray-orchestration`, `xray-solution-research`, `xray-feature-delivery`, `xray-design-exploration`, `xray-decision-experiment`, `xray-agent-evaluation`, `xray-protocol-compatibility` and `xray-runtime-qualification` have no bundled `agents/openai.yaml`; their discovery metadata is in their skill frontmatter.
 
 ## Native roles and policy settings
 
-`workspace.py` reads eleven maintained roles when generating/validating `.codex/config.toml`; `session.py` passes absolute role paths to a fresh Codex invocation. Codex reads the selected definition when creating a child. Stable role names do not identify source ownership.
+`workspace.py` reads nineteen maintained roles when generating/validating `.codex/config.toml`; `session.py` passes absolute role paths to a fresh Codex invocation. Codex reads the selected definition when creating a child. Stable role names do not identify source ownership.
 
 - [.codex/agents/mu_explorer.toml](../.codex/agents/mu_explorer.toml): narrow read-only exploration; Luna high.
 - [.codex/agents/mu_investigator.toml](../.codex/agents/mu_investigator.toml): bounded cross-file investigation; Sol 6.1 high.
 - [.codex/agents/mu_upstream_researcher.toml](../.codex/agents/mu_upstream_researcher.toml): external/upstream/dependency evidence; Sol 6.1 high.
 - [.codex/agents/mu_solution_researcher.toml](../.codex/agents/mu_solution_researcher.toml): practical native/direct/external implementation research; Sol 6.1 high.
+- [.codex/agents/mu_innovator.toml](../.codex/agents/mu_innovator.toml): complete mechanisms, alternatives and falsifiers; Sol 6.1 high.
+- [.codex/agents/mu_design_critic.toml](../.codex/agents/mu_design_critic.toml): independent premise/design counterexamples or acceptance; Sol 6.1 high.
+- [.codex/agents/mu_test_architect.toml](../.codex/agents/mu_test_architect.toml): consumer acceptance and experiment/evaluator controls; Sol 6.1 high.
+- [.codex/agents/mu_agent_evaluator.toml](../.codex/agents/mu_agent_evaluator.toml): complete outcome and workflow evaluation; Sol 6.1 high.
+- [.codex/agents/mu_protocol_reviewer.toml](../.codex/agents/mu_protocol_reviewer.toml): configuration/wire/transport/named-peer interoperability; Sol 6.1 high.
+- [.codex/agents/mu_concurrency_reviewer.toml](../.codex/agents/mu_concurrency_reviewer.toml): ownership/transitions/wait graphs and progress; Sol 6.1 high.
+- [.codex/agents/mu_security_reviewer.toml](../.codex/agents/mu_security_reviewer.toml): reachable input-to-sink security and trust boundaries; Sol 6.1 high.
+- [.codex/agents/mu_build_qualifier.toml](../.codex/agents/mu_build_qualifier.toml): selected source/toolchain/OS/ABI and native-consumer evidence; Sol 6.1 high.
 - [.codex/agents/mu_behavior_reviewer.toml](../.codex/agents/mu_behavior_reviewer.toml): real-caller behavior and integration verification; Sol 6.1 high.
 - [.codex/agents/mu_simplicity_reviewer.toml](../.codex/agents/mu_simplicity_reviewer.toml): remove unjustified machinery without omitting justified behavior; Sol 6.1 high.
-- [.codex/agents/mu_go_worker.toml](../.codex/agents/mu_go_worker.toml): assigned bounded implementation; Sol 6.1 high.
+- [.codex/agents/mu_go_worker.toml](../.codex/agents/mu_go_worker.toml): assigned bounded implementation or explicit experimenter mode; Sol 6.1 high.
 - [.codex/agents/mu_reviewer.toml](../.codex/agents/mu_reviewer.toml): correctness/regressions/tests; Sol 6.1 high.
-- [.codex/agents/mu_performance_reviewer.toml](../.codex/agents/mu_performance_reviewer.toml): allocations/latency/hot paths/backpressure; Sol 6.1 high.
+- [.codex/agents/mu_performance_reviewer.toml](../.codex/agents/mu_performance_reviewer.toml): controlled measurement design or independent allocations/latency/load review; Sol 6.1 high.
 - [.codex/agents/mu_critical_reviewer.toml](../.codex/agents/mu_critical_reviewer.toml): concurrency/security/Android/release; Sol 6.1 high.
 - [.codex/agents/mu_deep_reviewer.toml](../.codex/agents/mu_deep_reviewer.toml): one evidenced discriminator unresolved after Sol; Astra high.
 
@@ -154,7 +171,7 @@ These maintained Python files live in `.agents/scripts/`. Some are commands, oth
 - [orchestration.py](../.agents/scripts/orchestration.py): Windows host commands `init-context`, `configure`, `prepare`, `dispatch`, `batch`, `batch-status`, `status`, `start`, `stop`, `gc`; WSL boundary checks, selected config/deployment/receipts and native Gas City calls.
 - [model_router.py](../.agents/scripts/model_router.py): imported route selector/resolved-config validator; dispatch/batch use explicit policy, bounded lookup and evidenced escalation.
 - [agent_batch.py](../.agents/scripts/agent_batch.py): imported capture/hash verification/admission/replay for selected worktree bytes/Git blobs; submits ready native jobs and resumes identical IDs without duplicates.
-- [worker_context.py](../.agents/scripts/worker_context.py): command/imported isolated setup checks base/sole local-queue origin and writes worker context/Go config without nesting. Re-runs overwrite worker host files; never use on integrator checkout.
+- [worker_context.py](../.agents/scripts/worker_context.py): command/imported isolated setup checks base/sole local-queue origin and writes worker context/Go/public Context7/grep.app/two-tool Exa config without nesting. Re-runs overwrite worker host files; never use on integrator checkout.
 - [provision_worker.py](../.agents/scripts/provision_worker.py): Linux pre-start hook verifies manifest/slot, invokes native pinned worktree provisioning, generates context and trusts reviewed city-bound hooks.
 - [runtime_hooks.py](../.agents/scripts/runtime_hooks.py): Linux configure/pre-start helper creates/checks four reviewed hooks, verifies native inventory/fingerprints and persists trust via native Codex API. Changed/extra hooks block setup; ordinary host setup does not call it.
 
@@ -164,9 +181,10 @@ External configure deploys `go_mcp.py`, `resource_guard.py`, `worker_context.py`
 
 These maintained synthetic toolkit checks run through `unittest` discovery; they are not imported Xray runtime tests. Change them when accepted behavior needs evidence. Mocked passes do not prove installed backends/authenticated model runs/Android/source release. Use guarded commands in [MAINTENANCE.md](MAINTENANCE.md). Some analysis tests require local test context; real gopls cases skip without a binary. Keep skips visible.
 
-The nineteen `.agents/scripts/test_*.py` modules are:
+The twenty `.agents/scripts/test_*.py` modules are:
 
 - [test_agent_batch.py](../.agents/scripts/test_agent_batch.py): input bounds, frozen hashes, native admission/replay.
+- [test_agent_workflow.py](../.agents/scripts/test_agent_workflow.py): expanded role/skill discovery, generation, session paths, progressive references, policy rejection and existing external routes.
 - [test_analysis_helpers.py](../.agents/scripts/test_analysis_helpers.py): helper chain/profiles/parsing/normalization/probe failures.
 - [test_context_diagnostics.py](../.agents/scripts/test_context_diagnostics.py): bounded accounting extraction/redaction.
 - [test_context_policy.py](../.agents/scripts/test_context_policy.py): arithmetic/catalog compatibility/invalid policy.
@@ -181,7 +199,7 @@ The nineteen `.agents/scripts/test_*.py` modules are:
 - [test_resource_guard.py](../.agents/scripts/test_resource_guard.py): descendants/scratch recovery/idle release/cancellation.
 - [test_runtime_hooks.py](../.agents/scripts/test_runtime_hooks.py): reviewed commands/native fingerprints/trust.
 - [test_source_size.py](../.agents/scripts/test_source_size.py): blob accounting/categories/ownership/snapshots.
-- [test_worker_context.py](../.agents/scripts/test_worker_context.py): queue/base/isolated configuration.
+- [test_worker_context.py](../.agents/scripts/test_worker_context.py): queue/base/isolated configuration, exact public-retrieval allowlists and regeneration without stale auth/denials.
 - [test_workspace.py](../.agents/scripts/test_workspace.py): setup guards/preserved edits/inventory/generated config.
 - [test_xray_analysis.py](../.agents/scripts/test_xray_analysis.py): graph freshness/leases/concurrency/cancellation/retained manifests.
 - [test_xray_mcp.py](../.agents/scripts/test_xray_mcp.py): real stdio with fake backends/deadlines/cancellation/cleanup, no live indexing.

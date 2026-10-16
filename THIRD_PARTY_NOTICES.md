@@ -49,6 +49,18 @@ service access and terms remain independent of the toolkit's MPL-2.0 license.
 Search-result code retains its original project's license and notices. Inspect
 the exact source and applicable terms before reuse.
 
+## Public worker web retrieval
+
+**Exa:** separately operated remote MCP retrieval service at
+`https://mcp.exa.ai/mcp?tools=web_search_exa,web_fetch_exa`, used only by generated
+worker profiles with `web_search_exa` and `web_fetch_exa` allowlisted.
+[Public service](https://exa.ai/). Public questions/identifiers/URLs only; no
+private source, contracts, credentials or logs. Service source, model execution,
+auth settings and binaries are not bundled. Access and service terms remain
+independent of the toolkit license; returned material retains its source's
+applicable rights. A bounded successful native-client operation is not a service
+availability promise or fixed anonymous-rate quota.
+
 ## Workflow responsibility references
 
 The solution-research, feature-delivery and focused review instructions adapt
@@ -69,3 +81,38 @@ frameworks, execution policies or project contracts:
 These are design references for independently maintained instructions. Their
 licenses and any required upstream notices remain applicable to code or text
 copied from them; this distribution does not relicense those projects.
+
+## Invention and evaluation references
+
+The design-exploration, decision-experiment and agent-evaluation instructions are
+independently authored adaptations of narrow responsibilities and methods from
+these inspected public sources. No framework code, model service, full prompt,
+installer, fixed idea/finding quota or project authority is bundled from them:
+
+- **BMAD Creative Intelligence Suite**, technical contradiction, morphology,
+  analogy and assumption testing (MIT; upstream trademark terms remain):
+  [problem-solving source](https://github.com/bmad-code-org/bmad-module-creative-intelligence-suite/blob/658e71030be808181c1031f5461ee3613e7ff530/skills/bmad-cis-problem-solving/SKILL.md),
+  [license](https://github.com/bmad-code-org/bmad-module-creative-intelligence-suite/blob/658e71030be808181c1031f5461ee3613e7ff530/LICENSE).
+- **BMAD Method**, independent design counterexamples and elicitation (MIT;
+  upstream trademark terms remain):
+  [reviewer gate](https://github.com/bmad-code-org/BMAD-METHOD/blob/cfba3ff5f982c1809e060606e399f55ebd7bce5e/skills/bmad-architecture/references/reviewer-gate.md),
+  [license](https://github.com/bmad-code-org/BMAD-METHOD/blob/cfba3ff5f982c1809e060606e399f55ebd7bce5e/LICENSE).
+- **LifeOS**, independent proposals, criticism and retained synthesis inputs
+  (MIT): [Council source](https://github.com/danielmiessler/LifeOS/blob/5e2f2e8c0abde612da0e99c16c0d07d4ec21b88c/LifeOS/install/skills/Council/SKILL.md),
+  [license](https://github.com/danielmiessler/LifeOS/blob/5e2f2e8c0abde612da0e99c16c0d07d4ec21b88c/LICENSE).
+- **OpenHands software-agent SDK**, explicit critique/refinement and evidence
+  boundaries (MIT): [critic source](https://github.com/OpenHands/software-agent-sdk/blob/12e967664c2353f4cb85dd27da04ade035ff078c/openhands-sdk/openhands/sdk/agent/critic_mixin.py),
+  [license](https://github.com/OpenHands/software-agent-sdk/blob/12e967664c2353f4cb85dd27da04ade035ff078c/LICENSE).
+- **ShinkaEvolve**, executable evaluation, repeated observations and feedback
+  (Apache-2.0): [evaluation source](https://github.com/SakanaAI/ShinkaEvolve/blob/8adc053a2ce4511ad2ac310e004c530a73fb974a/shinka/core/wrap_eval.py),
+  [license](https://github.com/SakanaAI/ShinkaEvolve/blob/8adc053a2ce4511ad2ac310e004c530a73fb974a/LICENSE).
+- **OpenEvolve**, candidate/evaluator separation and honest generation failures
+  (Apache-2.0): [evaluation source](https://github.com/algorithmicsuperintelligence/openevolve/blob/a1e9d91eecde612f0efc8e8e31f59b36998248c0/openevolve/evaluator.py),
+  [license](https://github.com/algorithmicsuperintelligence/openevolve/blob/a1e9d91eecde612f0efc8e8e31f59b36998248c0/LICENSE).
+
+These source pins identify design references, not installed dependencies or a
+claim that their benchmarks establish this toolkit's quality. Existing ECC,
+GSD and Superpowers credits above also apply to factual research, consumer
+verification and causal experiments. No trajectory classifier, keyword score
+or model grade replaces actual correctness evidence. Copied upstream material,
+if introduced by a future task, still requires its own applicable notices.

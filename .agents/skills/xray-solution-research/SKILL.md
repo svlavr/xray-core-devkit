@@ -5,6 +5,20 @@ description: Find and compare practical implementations before adding or redesig
 
 # Research a working solution
 
+For uncertain premises or competing designs, use `xray-design-exploration`:
+an innovator proposes complete alternatives and an independent design critic
+challenges them against the original outcome. Resolve their disputed facts from
+source; neither proposal nor criticism is evidence by itself. Use
+`xray-decision-experiment` for a test architect's deciding observation and an
+authorized worker's actual run, then feed results back through main.
+
+For protocol or upstream changes, `xray-protocol-compatibility` connects exact
+API/default/error/dependency facts to config/wire and real-consumer controls.
+Use the native/upstream mode in `xray-runtime-qualification`'s build reference
+and only implicated lifecycle/security/performance modes. A compile-green update
+alone is not native compatibility. Public worker retrieval may use the two-tool
+Exa profile; questions and URLs contain only public identifiers.
+
 Start with the observable outcome and the decision that needs evidence. Read the
 relevant native path and the human-supplied task/contract under
 `docs/PROJECT_SCOPE.md`. Check assumptions in requirements as

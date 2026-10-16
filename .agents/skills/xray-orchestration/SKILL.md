@@ -36,6 +36,28 @@ Requirements may change on evidence, with the reason and resulting scope
 explicit. Do not close a partial implementation by moving agreed functions to
 an unrequested optional future phase. Recompute dependencies after revisions.
 
+For uncertain goals/mechanisms, `xray-design-exploration` routes an innovator,
+independent design critic and factual researchers; `mu_test_architect` designs
+the deciding observation and consumer acceptance. `xray-decision-experiment`
+assigns the existing `mu_go_worker` explicit experimenter mode with owned scratch
+and actual execution. Main returns observations to the creator/critic, chooses
+on evidence and continues implementation/consumer verification. For competing
+hypotheses use common meaningful acceptance, not votes; workflow/algorithm
+comparisons use `mu_agent_evaluator` under `xray-agent-evaluation`. Advisory
+external packets use `kind=review` with the named competency in the body;
+experiment execution uses `kind=implement`. These reuse existing pools and
+Sol 6.1 high routing, without a new scheduler or fixed team/idea/finding quota.
+
+Runtime ready outputs can include scoped protocol interoperability, lifecycle
+transition/wait-graph analysis, reachable trust-to-sink security, selected
+target/ABI qualification and controlled performance design/result review.
+Use `xray-protocol-compatibility` or the relevant `xray-runtime-qualification`
+reference and specialist. Supply its actual instructions and exact evidence in
+external `kind=review` packets; pool/model routing alone is not named-role proof.
+Critical review retains cross-boundary interactions. No default full roster,
+automatic build matrix or inferred device acceptance; one coupled seam can
+remain local, while independent outputs still use the ready frontier.
+
 Before dispatch, persist a ready-frontier receipt under `.local/` with all
 material candidate outputs, owners, prerequisites/input readiness and chosen
 native/external lane. Record configured capacity, this chat's observed slots,

@@ -21,11 +21,16 @@ PROJECT_KEYS = {'baseline', 'expected_branch', 'integrating_url', 'integrating_b
                 'public_url', 'public_branch', 'anchor', 'public_push_mode'}
 MANAGED_ROLES = {'mu_explorer', 'mu_investigator', 'mu_upstream_researcher', 'mu_go_worker',
                  'mu_reviewer', 'mu_critical_reviewer', 'mu_performance_reviewer', 'mu_deep_reviewer',
-                 'mu_solution_researcher', 'mu_behavior_reviewer', 'mu_simplicity_reviewer'}
+                 'mu_solution_researcher', 'mu_behavior_reviewer', 'mu_simplicity_reviewer',
+                 'mu_innovator', 'mu_design_critic', 'mu_test_architect', 'mu_agent_evaluator',
+                 'mu_protocol_reviewer', 'mu_concurrency_reviewer', 'mu_security_reviewer',
+                 'mu_build_qualifier'}
 MANAGED_SKILLS = {'adversarial-reviewer', 'handoff', 'security-threat-model', 'xray-code-analysis',
                   'xray-core-start', 'xray-fork-android-validation', 'xray-fork-checkpoint',
                   'xray-fork-implement', 'xray-fork-research', 'xray-orchestration', 'xray-public-ci',
-                  'xray-solution-research', 'xray-feature-delivery'}
+                  'xray-solution-research', 'xray-feature-delivery', 'xray-design-exploration',
+                  'xray-decision-experiment', 'xray-agent-evaluation',
+                  'xray-protocol-compatibility', 'xray-runtime-qualification'}
 
 
 def context_path():

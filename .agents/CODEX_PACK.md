@@ -64,6 +64,10 @@ Roles: `mu_explorer` (Luna high); `mu_investigator`,
 `mu_performance_reviewer`, `mu_critical_reviewer` (Sol 6.1 high);
 `mu_solution_researcher`, `mu_behavior_reviewer` and
 `mu_simplicity_reviewer` also use Sol 6.1 high;
+`mu_innovator`, `mu_design_critic`, `mu_test_architect` and
+`mu_agent_evaluator` use Sol 6.1 high;
+`mu_protocol_reviewer`, `mu_concurrency_reviewer`, `mu_security_reviewer` and
+`mu_build_qualifier` also use Sol 6.1 high;
 `mu_deep_reviewer` (Astra high, one named unresolved discriminator after Sol).
 The distributed model policy is: `gpt-6-luna` high for narrow
 exploration, `gpt-6.1-sol` high for ordinary roles and external worker defaults,
@@ -108,6 +112,35 @@ by real behavior rather than speculative wrappers or placeholder success.
 Clear direct changes need no mandatory architecture package. The public process
 and adaptation boundary are in
 `docs/WORKFLOW.md#practical-solution-research-and-complete-delivery`.
+
+Use `xray-design-exploration` when goals, premises or mechanisms are uncertain.
+An innovator offers complete alternatives; an independent design critic gets
+the original objective and challenges assumptions or supports acceptance.
+Factual researchers resolve disputed source/API/version/license claims.
+`mu_test_architect` designs consumer acceptance and the deciding observation;
+`xray-decision-experiment` assigns the existing worker explicit experimenter
+mode and owned scratch for an actual run. Main returns observations to the
+creator/critic, adjudicates and continues implementation/consumer verification.
+For competing hypotheses use common meaningful tests; algorithm/workflow
+comparison uses `mu_agent_evaluator` under `xray-agent-evaluation`, including
+known-invalid evaluator checks. No forced novelty, fixed team/round count,
+idea/finding quota, votes or keyword/LLM score establishes correctness.
+Clear direct changes need no added ceremony. The public authority is
+`docs/WORKFLOW.md#invention-criticism-and-experiments`.
+
+For changed config/protocol/transport/peer semantics use
+`xray-protocol-compatibility` and `mu_protocol_reviewer`. Select only implicated
+`xray-runtime-qualification` references: `mu_concurrency_reviewer` for resource
+transitions/wait graphs; `mu_security_reviewer` for reachable trust-to-sink
+paths; `mu_build_qualifier` for target/ABI/native-consumer witnesses; existing
+`mu_performance_reviewer` for controlled measurement design or independent
+results review. Test architect and owned workers supply sensitive actual checks;
+behavior review follows the real caller. Critical review retains genuine
+interactions and release boundaries. No default full roster or platform matrix,
+universal joins/quotas, device acceptance or new runtime owner. External review
+packets explicitly include the specialist competency/instructions and inputs;
+their pool identity is not proof that a named native role ran. See
+`docs/WORKFLOW.md#runtime-and-protocol-specialists`.
 
 ## Dispatch and review
 
@@ -207,6 +240,10 @@ neither receives private source, contracts, credentials or logs. Inspect actual
 source, its revision and license before reuse. Worker profiles include these
 remote discovery services and bind semantic tools to their own source
 root; do not multiply primary-root services across isolated workers.
+Worker-only `exa_public_research` additionally provides allowlisted public
+`web_search_exa`/`web_fetch_exa` over HTTPS; search requires query and objective,
+fetch takes urls. Never submit private questions or inputs. Its approval intent
+does not broaden actual parent permissions; primary MCP configuration is unchanged.
 Never treat missing tools/package loads as an empty reference inventory.
 
 Project tools are edited in place. `.agents/` and `.codex/agents/` are tracked

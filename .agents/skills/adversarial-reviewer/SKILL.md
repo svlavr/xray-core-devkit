@@ -22,6 +22,13 @@ When this skill runs inside an assigned reviewer child, perform that assigned
 review directly and return the verdict and unresolved discriminators to main.
 Never spawn or redirect another agent from a child.
 
+Main can assign distinct protocol, concurrency, security, build/ABI or measured
+performance questions through `xray-protocol-compatibility` and the implicated
+`xray-runtime-qualification` reference. Consume their exact evidence while
+retaining this critical review's cross-boundary integration remit. Do not run
+every specialist or a full target matrix by default; child reviewers return
+the needed question to main rather than dispatching it themselves.
+
 For changed shared/exported Go ownership or removal/move claims, apply
 `xray-code-analysis` within the assigned read set. Reuse validated source/build
 evidence; independently query only a named unresolved risk. Graph/RTA results

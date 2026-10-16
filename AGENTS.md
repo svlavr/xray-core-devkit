@@ -29,6 +29,16 @@ human choices, and never silently omit agreed work or relabel unfinished behavio
 as optional future work. Clear changes need no mandatory architecture package.
 See `docs/WORKFLOW.md#practical-solution-research-and-complete-delivery`.
 
+Use `xray-design-exploration` for uncertain goals, premises or mechanisms:
+complete alternatives, independent design criticism, factual researchers and
+acceptance design feed an actual `xray-decision-experiment` assigned to the
+existing worker in experimenter mode. Main returns results to creators/critics,
+selects on evidence and continues implementation through consumer verification.
+Use `xray-agent-evaluation` for workflow comparisons or disputed completion
+claims. No fixed team, idea/finding quota, forced novelty or correctness score
+replaces executable evidence. Clear direct changes stay direct. See
+`docs/WORKFLOW.md#invention-criticism-and-experiments`.
+
 Main retains the human-selected model and owns integration, validation and Git.
 Use one writer per checkout. Assign exact disjoint write sets; independent
 writers use isolated worktrees with one integrator. Native children do not
@@ -48,7 +58,10 @@ when scope or prerequisites change. Do not duplicate jobs across pools.
 Roles retain their distributed names: `mu_explorer` uses `gpt-6-luna` high;
 `mu_investigator`, `mu_upstream_researcher`, `mu_go_worker`, `mu_reviewer`,
 `mu_performance_reviewer`, `mu_critical_reviewer`, `mu_solution_researcher`,
-`mu_behavior_reviewer` and `mu_simplicity_reviewer` use `gpt-6.1-sol` high.
+`mu_behavior_reviewer`, `mu_simplicity_reviewer`, `mu_innovator`,
+`mu_design_critic`, `mu_test_architect` and `mu_agent_evaluator` use `gpt-6.1-sol` high.
+`mu_protocol_reviewer`, `mu_concurrency_reviewer`, `mu_security_reviewer` and
+`mu_build_qualifier` also use `gpt-6.1-sol` high.
 `mu_deep_reviewer` uses `gpt-6-astra` high for one named technical discriminator
 left unresolved after Sol and supplied with its evidence. Missing input,
 authority, access or validation is not a model-escalation trigger. Only one Astra
@@ -58,6 +71,14 @@ Read-only and write-set instructions are task constraints. A role's
 `sandbox_mode` entry does not enforce a separate sandbox or expand access;
 the parent session's effective sandbox and approvals determine tool access.
 Keep role instructions within that boundary and report unavailable capabilities.
+
+Use `xray-protocol-compatibility` for an implicated config-to-wire/peer seam and
+`xray-runtime-qualification` for selected concurrency, security, build/ABI or
+measured-performance modes. Assign the corresponding specialist a distinct
+question, with test architect/worker/behavior evidence through the real consumer.
+Critical review retains cross-boundary integration duties. No automatic full
+roster, build matrix or device/release proof follows. See
+`docs/WORKFLOW.md#runtime-and-protocol-specialists`.
 
 Use English for internal analysis summaries, agent tasks/messages, tool queries,
 reports, handoffs, queue comments, documentation and commit metadata. Only the

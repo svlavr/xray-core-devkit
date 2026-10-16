@@ -20,6 +20,21 @@ is uncertain. For a clear direct change, proceed without a mandatory design
 document. Choose the least machinery that implements the whole justified scope.
 A small implementation is useful only if it serves the actual required behavior.
 
+When the goal, premise or mechanism is uncertain, use `xray-design-exploration`
+for complete alternatives, independent design criticism and factual research.
+`mu_test_architect` designs actual consumer acceptance; `xray-decision-experiment`
+assigns a worker to run a deciding experiment. Main returns results to creators
+and critics before selecting implementation. Use `xray-agent-evaluation` for
+workflow comparisons or disputed completion evidence. Clear direct changes
+need no fixed team or extra ceremony. See
+`docs/WORKFLOW.md#invention-criticism-and-experiments`.
+
+Select `xray-protocol-compatibility` for changed config-to-wire/peer semantics,
+and the implicated `xray-runtime-qualification` mode for concurrency, security,
+target/ABI or measured performance. Specialist outputs inform actual consumer
+acceptance and cross-boundary critical review; no automatic full roster or
+build/device matrix follows.
+
 Main computes the ready frontier under xray-orchestration. Independent native and
 external research, consumer/test design, disjoint owners and applicable reviews
 run in parallel within observed capacity and leases. Profiles are competencies,
