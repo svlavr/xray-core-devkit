@@ -1,0 +1,7 @@
+{
+  "models": ["gpt-6-astra", "gpt-6.1-sol", "gpt-6-luna"],
+  "window": 872000,
+  "effective_percent": 95,
+  "compact_at_effective_percent": 80,
+  "scope": "total"
+}

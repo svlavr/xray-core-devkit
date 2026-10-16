@@ -1,0 +1,303 @@
+"""Prepare exact advisory inputs and submit independent jobs to native Gas City."""
+import contextlib
+import hashlib
+import json
+import os
+from pathlib import Path, PurePosixPath
+import re
+import subprocess
+import sys
+import uuid
+from datetime import datetime, timezone
+
+import workspace
+from model_router import select_route
+from language_policy import WORKER_INSTRUCTIONS
+
+ROOT=workspace.ROOT
+STATE=ROOT/'.local/workspace/batches'
+FLAGS=getattr(subprocess,'CREATE_NO_WINDOW',0)
+
+
+def digest(value):
+    return hashlib.sha256(value).hexdigest()
+
+
+def encoded(value):
+    return json.dumps(value,sort_keys=True,ensure_ascii=False).encode('utf-8')
+
+
+def save(path,value):
+    temp=path.with_suffix('.tmp')
+    temp.write_bytes(encoded(value)+b'\n')
+    temp.replace(path)
+
+
+@contextlib.contextmanager
+def lock(path):
+    with path.open('a+b') as handle:
+        handle.seek(0);handle.write(b'0');handle.flush();handle.seek(0)
+        if os.name=='nt':
+            import msvcrt
+            msvcrt.locking(handle.fileno(),msvcrt.LK_NBLCK,1)
+        else:
+            import fcntl
+            fcntl.flock(handle.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
+        try:yield
+        finally:
+            handle.seek(0)
+            if os.name=='nt':msvcrt.locking(handle.fileno(),msvcrt.LK_UNLCK,1)
+            else:fcntl.flock(handle.fileno(),fcntl.LOCK_UN)
+
+
+def relative(value):
+    if not isinstance(value,str) or not value or '\\' in value or ':' in value:
+        raise ValueError('Evidence paths must be explicit relative POSIX paths')
+    p=PurePosixPath(value)
+    if p.is_absolute() or '..' in p.parts or str(p)!=value:
+        raise ValueError('Evidence path escapes or aliases the source root: '+value)
+    if any(x.lower() in {'.git','.env','auth.json','credentials.json'} for x in p.parts):
+        raise ValueError('Credentials/Git storage cannot be input evidence')
+    if value.casefold().startswith(('.local/workspace/','.codex/config.toml')):
+        raise ValueError('Generated host settings cannot be input evidence')
+    return value
+
+
+def check_packet(packet):
+    batch=packet.get('batch_id','')
+    if not re.fullmatch(r'[a-z0-9][a-z0-9-]{2,47}',batch):
+        raise ValueError('batch_id needs 3..48 lowercase letters/digits/hyphens')
+    jobs=packet.get('jobs',[]);sources=packet.get('sources',{})
+    if not 2<=len(jobs)<=23 or not sources:
+        raise ValueError('A parallel batch needs 2..23 independent jobs and explicit sources')
+    for alias,source in sources.items():
+        if not re.fullmatch(r'[a-z][a-z0-9_-]{0,31}',alias):
+            raise ValueError('Invalid source alias')
+        ref=source.get('ref','WORKTREE')
+        if ref not in ('WORKTREE','HEAD') and not re.fullmatch(r'[0-9a-f]{40}',ref):
+            raise ValueError('Pin source ref to a full commit SHA, HEAD or WORKTREE')
+        paths=source.get('paths',[])
+        if not paths or len(paths)!=len({relative(p).casefold() for p in paths}):
+            raise ValueError('Empty/aliased evidence paths')
+    keys=set()
+    for job in jobs:
+        key=job.get('key','')
+        if not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,39}',key) or key in keys:
+            raise ValueError('Each job needs a unique simple key')
+        keys.add(key)
+        if job.get('kind') not in ('explore','review','deep') or job.get('depends_on'):
+            raise ValueError('Batch jobs are independent read-only advisory tasks')
+        title=job.get('title','');body=job.get('body','')
+        if not title.strip() or '\n' in title or len(title)>300 or not body.strip():
+            raise ValueError('Each job needs a one-line title and scoped body')
+        if re.search(r'\b[A-Za-z]:[\\/]|/mnt/[a-z](?:/|\b)',body):
+            raise ValueError('Do not give advisers Windows/mounted paths; use source aliases')
+        if not job.get('inputs') or any(a not in sources for a in job['inputs']):
+            raise ValueError('Every job must select existing source aliases')
+        if select_route(job)['action']!='DISPATCH':
+            raise ValueError('Resolve missing input/access before submitting the batch')
+    return batch
+
+
+def read_worktree(root,path):
+    target=root/path
+    if not target.is_file() or target.resolve()!=target.absolute():
+        raise ValueError('Missing or linked evidence: '+path)
+    for part in [target,*target.parents]:
+        if part==root:break
+        if part.is_symlink() or getattr(part.lstat(),'st_file_attributes',0)&0x400:
+            raise ValueError('Linked/reparse evidence: '+path)
+    if target.stat().st_nlink!=1:
+        raise ValueError('Hard-linked evidence: '+path)
+    return target.read_bytes()
+
+
+def capture(packet,root=ROOT):
+    """Capture worktree bytes or immutable Git blobs, then check for read races."""
+    head=workspace.git('rev-parse','HEAD');files={};manifest={};live=[]
+    for alias,source in packet['sources'].items():
+        ref=source.get('ref','WORKTREE')
+        sha=head if ref=='HEAD' else ref
+        if ref!='WORKTREE':
+            sha=workspace.git('rev-parse',sha+'^{commit}')
+        for path in source['paths']:
+            if ref=='WORKTREE':
+                blob=read_worktree(root,path);live.append((path,blob))
+            else:
+                entry=workspace.git('ls-tree',sha,'--',path).split()
+                if not entry or entry[0] not in ('100644','100755'):
+                    raise ValueError('Evidence ref is not a regular Git blob: '+path)
+                blob=subprocess.check_output([workspace.git_executable(),'-C',str(root),'show',sha+':'+path],timeout=30,creationflags=FLAGS)
+            key=alias+'/'+path
+            files[key]=blob
+            manifest[key]={'sha256':digest(blob),'bytes':len(blob),'ref':sha}
+            if len(files)>512 or len(blob)>8*1024*1024 or sum(len(b) for b in files.values())>64*1024*1024:
+                raise ValueError('Evidence exceeds 512 files / 8 MiB per file / 64 MiB total; scope it down')
+    if workspace.git('rev-parse','HEAD')!=head or any(read_worktree(root,p)!=b for p,b in live):
+        raise RuntimeError('Source changed during capture; retry with stable inputs')
+    return head,files,manifest
+
+
+def verify_copy(directory,manifest):
+    for name,entry in manifest.items():
+        if digest(read_worktree(directory,name))!=entry['sha256']:
+            raise RuntimeError('Snapshot hash mismatch: '+name)
+
+
+def snapshot(data,packet):
+    head,files,manifest=capture(packet)
+    linux=data['city']+'/.gc/mu-inputs/'+packet['batch_id']+'-'+uuid.uuid4().hex[:12]
+    directory=Path('//wsl.localhost')/data['distribution']/linux.lstrip('/')
+    directory.mkdir(parents=True,exist_ok=False)
+    for name,blob in files.items():
+        target=directory/name;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(blob)
+    verify_copy(directory,manifest)
+    # Windows verifies the written bytes; Linux proves the actual reader namespace.
+    (directory/'manifest.json').write_bytes(encoded({'source_head':head,'files':manifest})+b'\n')
+    probe="import json,hashlib,pathlib,sys;p=pathlib.Path(sys.argv[1]);m=json.loads((p/'manifest.json').read_text());assert all(hashlib.sha256((p/n).read_bytes()).hexdigest()==v['sha256'] for n,v in m['files'].items());print(len(m['files']))"
+    subprocess.run(['wsl.exe','-d',data['distribution'],'-u',data['user'],'--exec','python3','-c',probe,linux],
+        check=True,capture_output=True,timeout=30,creationflags=FLAGS)
+    return {'linux':linux,'source_head':head,'files':manifest,'manifest_sha256':digest((directory/'manifest.json').read_bytes())}
+
+
+class Native:
+    def __init__(self,data,command):self.data=data;self.command=command
+    def run(self,args,body=None):
+        result=subprocess.run(self.command(self.data,args),input=body,capture_output=True,timeout=60,creationflags=FLAGS)
+        if result.returncode:
+            raise RuntimeError(result.stderr.decode('utf-8',errors='replace') or result.stdout.decode('utf-8',errors='replace'))
+        if result.stderr:sys.stderr.write(result.stderr.decode('utf-8',errors='replace'))
+        return result.stdout
+    def show(self,id):
+        try:return json.loads(self.run(['bd','show',id,'--json']))[0]
+        except RuntimeError as error:
+            if re.search(r'not found|no issue found',str(error),re.I):return None
+            raise
+
+
+def planned_jobs(packet,evidence):
+    jobs=[]
+    for task in packet['jobs']:
+        route=select_route(task)
+        body=(WORKER_INSTRUCTIONS+'\n\nIndependent READ-ONLY job in parallel batch '+packet['batch_id']+'. No source edits, Git writes, delegation or messages. '
+              'Other agents work on different questions; inspect only your inputs and return findings, not another full audit.\n'
+              'Evidence is already copied and verified inside this Linux environment. Do not request Windows mounts.\n'
+              'Snapshot root: '+evidence['linux']+'\nManifest: '+evidence['linux']+'/manifest.json\n'
+              'Source HEAD: '+evidence['source_head']+'; WORKTREE files are pinned by individual hashes, not HEAD.\n'
+              'Your source directories: '+', '.join(evidence['linux']+'/'+a for a in task['inputs'])+'\n\n'+task['body']+
+              '\n\nRecord a comment whose first line is exactly one of: status: DONE; status: NEEDS_CONTEXT; status: UNRESOLVED_TECHNICAL. '
+              'On subsequent lines give evidence/findings/limits. '
+              'Close only your task after saving the result and drain. Never fabricate success for unavailable evidence.')
+        title='['+packet['batch_id']+'/'+task['key']+'] '+task['title']
+        hash=digest(encoded({'title':title,'body':body,'route':route}))
+        jobs.append({'key':task['key'],'id':'mc-b-'+digest((packet['batch_id']+'/'+task['key']).encode())[:20],
+                     'title':title,'body':body,'hash':hash,'route':route,'phase':'planned'})
+    return jobs
+
+
+def matches(actual,job):
+    if actual is None:raise RuntimeError('Native task disappeared: '+job['id'])
+    if (actual.get('id')!=job['id'] or actual.get('title')!=job['title'] or actual.get('description')!=job['body']
+            or actual.get('metadata',{}).get('mu.task_hash')!=job['hash']):
+        raise RuntimeError('Existing native task differs from this batch: '+job['id'])
+    route=actual.get('metadata',{}).get('gc.routed_to')
+    if route and route!=job['route']['target']:
+        raise RuntimeError('Existing task is routed to another pool: '+job['id'])
+    if actual.get('assignee') and not route:
+        raise RuntimeError('Task has an unrelated assignee: '+job['id'])
+
+
+def enqueue(state,native,persist):
+    # Stage all native beads, then route all ready jobs before any monitoring.
+    for job in state['jobs']:
+        actual=native.show(job['id'])
+        if actual is None:
+            job['phase']='creating';persist()
+            native.run(['bd','create',job['title'],'--id',job['id'],'--type','task','--status','open',
+                '--labels','mu-batch:'+state['batch_id'],'--metadata',json.dumps({'mu.task_hash':job['hash']}),
+                '--body-file','-','--silent'],job['body'].encode('utf-8'))
+            actual=native.show(job['id'])
+        if actual is None:raise RuntimeError('Create outcome unknown: '+job['id'])
+        matches(actual,job);job['phase']='created';persist()
+    errors=[]
+    for job in state['jobs']:
+        try:
+            actual=native.show(job['id']);matches(actual,job)
+            if actual['status']=='closed':job['phase']='closed'
+            elif actual.get('metadata',{}).get('gc.routed_to')==job['route']['target'] and actual.get('assignee'):
+                owner=native.show(actual['assignee'])
+                if (not owner or owner.get('id')!=actual['assignee'] or owner.get('issue_type')!='session'
+                        or owner.get('status')=='closed' or owner.get('metadata',{}).get('state')=='closed'
+                        or owner.get('metadata',{}).get('template')!=job['route']['target']):
+                    raise RuntimeError('Claim belongs to an unverified pool session; reconcile '+job['id'])
+                job['phase']='claimed'
+            else:
+                if actual['status']!='open' or actual.get('assignee'):
+                    raise RuntimeError('Task is not unassigned ready work; reconcile '+job['id'])
+                recovery=actual.get('metadata',{}).get('gc.routed_to')==job['route']['target']
+                job['phase']='routing';persist()
+                native.run(['sling',job['route']['target'],job['id'],'--no-formula','--no-convoy',
+                            *(['--nudge'] if recovery else []),'--json'])
+                confirmed=native.show(job['id']);matches(confirmed,job)
+                if confirmed.get('metadata',{}).get('gc.routed_to')!=job['route']['target']:
+                    raise RuntimeError('Native routing postcondition missing: '+job['id'])
+                job['phase']='routed'
+            job.pop('error',None)
+        except (RuntimeError,subprocess.SubprocessError) as error:
+            job['error']=str(error);errors.append(job['id'])
+        persist()
+    if errors:raise RuntimeError('Partial batch; resume the same packet/IDs after inspection: '+', '.join(errors))
+
+
+def namespace(data):
+    return {**{k:data[k] for k in ('distribution','user','city')},'integration_root':str(ROOT)}
+
+
+def check_namespace(state,data):
+    if state.get('namespace')!=namespace(data):raise RuntimeError('Batch belongs to a different native namespace or integration root')
+
+
+def run_batch(data,path,command):
+    packet=json.loads(Path(path).read_text(encoding='utf-8'));batch=check_packet(packet)
+    workspace.repository_guard();STATE.mkdir(parents=True,exist_ok=True)
+    record=STATE/(batch+'.json')
+    with lock(STATE/(batch+'.lock')):
+        if record.exists():
+            state=json.loads(record.read_text(encoding='utf-8'))
+            check_namespace(state,data)
+            if state['packet_hash']!=digest(encoded(packet)):raise ValueError('Batch ID already owns a different packet')
+            directory=Path('//wsl.localhost')/data['distribution']/state['evidence']['linux'].lstrip('/')
+            verify_copy(directory,state['evidence']['files'])
+            if digest((directory/'manifest.json').read_bytes())!=state['evidence']['manifest_sha256']:
+                raise RuntimeError('Snapshot manifest changed')
+        else:
+            evidence=snapshot(data,packet)
+            state={'batch_id':batch,'namespace':namespace(data),'packet_hash':digest(encoded(packet)),'evidence':evidence,
+                'created_at':datetime.now(timezone.utc).isoformat(),'jobs':planned_jobs(packet,evidence)}
+            save(record,state)
+        enqueue(state,Native(data,command),lambda:save(record,state))
+        return {'batch_id':batch,'snapshot':state['evidence']['linux'],'source_head':state['evidence']['source_head'],
+                'jobs':[{k:j[k] for k in ('key','id','route','phase')} for j in state['jobs']],
+                'next':'orchestration.py batch-status '+batch}
+
+
+def batch_status(data,batch,command):
+    if not re.fullmatch(r'[a-z0-9][a-z0-9-]{2,47}',batch):raise ValueError('Invalid batch ID')
+    state=json.loads((STATE/(batch+'.json')).read_text(encoding='utf-8'));native=Native(data,command)
+    check_namespace(state,data)
+    directory=Path('//wsl.localhost')/data['distribution']/state['evidence']['linux'].lstrip('/')
+    verify_copy(directory,state['evidence']['files'])
+    if digest((directory/'manifest.json').read_bytes())!=state['evidence']['manifest_sha256']:
+        raise RuntimeError('Snapshot manifest changed; advisory evidence must be requalified')
+    rows=[]
+    for job in state['jobs']:
+        item=native.show(job['id'])
+        if item is None:rows.append({'key':job['key'],'id':job['id'],'status':'unknown'});continue
+        matches(item,job)
+        comments=json.loads(native.run(['bd','comments',job['id'],'--json'])) if item['status']=='closed' or item.get('comment_count') else []
+        outcomes=[m.group(1) for c in comments if (m:=re.search(r'^status:\s*(DONE|NEEDS_CONTEXT|UNRESOLVED_TECHNICAL)\s*$',c['text'],re.M))]
+        rows.append({'key':job['key'],'id':job['id'],'model':job['route']['model'],'effort':job['route']['effort'],
+            'status':item['status'],'assignee':item.get('assignee'),'started_at':item.get('started_at'),
+            'closed_at':item.get('closed_at'),'result':outcomes[-1] if outcomes else None,'comments':comments})
+    sessions=json.loads(native.run(['session','list','--json']))
+    return {'batch_id':batch,'jobs':rows,'sessions':sessions,'all_done':all(j['status']=='closed' and j.get('result')=='DONE' for j in rows)}

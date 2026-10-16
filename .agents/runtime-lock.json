@@ -1,0 +1,39 @@
+{
+  "platform": "linux-amd64",
+  "assets": [
+    {
+      "name": "gascity",
+      "version": "v1.5.0",
+      "url": "https://github.com/gastownhall/gascity/releases/download/v1.5.0/gascity_1.5.0_linux_amd64.tar.gz",
+      "sha256": "0ff5cfc3f1cb2e4260d3d93fcce7a4e40bb5675b74eb9de185156757d4f7fa9c",
+      "executable": "gc"
+    },
+    {
+      "name": "beads",
+      "version": "v1.3.1",
+      "url": "https://github.com/gastownhall/beads/releases/download/v1.3.1/beads_1.3.1_linux_amd64.tar.gz",
+      "sha256": "3219443a9734b89b93fb16ee8d65844759fa1b3cd3cf139c606b7353cfb0715c",
+      "executable": "bd"
+    },
+    {
+      "name": "dolt",
+      "version": "v2.4.2",
+      "url": "https://github.com/dolthub/dolt/releases/download/v2.4.2/dolt-linux-amd64.tar.gz",
+      "sha256": "5d95a271149dc6ea97f47157af7ba9a0df5e8d4e9bbac4d79c169f2faa3cfb9e",
+      "executable": "dolt"
+    },
+    {
+      "name": "codex",
+      "version": "rust-v0.162.0-alpha.2",
+      "url": "https://github.com/openai/codex/releases/download/rust-v0.162.0-alpha.2/codex-package-x86_64-unknown-linux-musl.tar.gz",
+      "sha256": "679caa80315c126a8b2118fb76b3795268dc2592f501dd4ecc44f6861c44477f",
+      "executable": "codex",
+      "required_members": [
+        "bin/codex",
+        "bin/codex-code-mode-host",
+        "codex-path/rg",
+        "codex-resources/bwrap"
+      ]
+    }
+  ]
+}

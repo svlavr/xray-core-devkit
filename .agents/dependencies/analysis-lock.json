@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "go_toolchain": "go1.27.0",
+  "node_observed": "v24.18.0",
+  "go_tools": {
+    "gopls": "golang.org/x/tools/gopls@v0.23.0",
+    "deadcode": "golang.org/x/tools/cmd/deadcode@v0.50.0"
+  },
+  "npm": {
+    "gitnexus": {"package": "gitnexus", "version": "1.6.12", "license": "PolyForm-Noncommercial-1.0.0"},
+    "repomix": {"package": "repomix", "version": "1.18.1", "license": "MIT"},
+    "ast-grep": {"package": "@ast-grep/cli", "version": "0.45.3", "license": "MIT"}
+  }
+}

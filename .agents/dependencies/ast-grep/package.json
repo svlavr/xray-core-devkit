@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@ast-grep/cli": "0.45.3"
+  }
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Xray Code Analysis"
+  short_description: "Trace Go owners, references and removal candidates"
+  default_prompt: "Use $xray-code-analysis to inspect the owners and change impact of this Xray Go symbol."

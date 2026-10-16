@@ -1,0 +1,37 @@
+[workspace]
+provider = "codex"
+# 23 coding workers plus the coordinator and deterministic control dispatcher.
+max_active_sessions = 25
+
+[daemon]
+nudge_dispatcher = "supervisor"
+
+[providers.codex]
+base = "builtin:codex"
+ready_delay_ms = 3000
+args_append = ["-c", "agents.enabled=false"]
+
+[providers.codex.option_defaults]
+model = "gpt-6.1-sol"
+effort = "high"
+permission_mode = "unrestricted"
+
+# Host proxy values are injected from ignored orchestration.json by configure.
+
+[defaults.rig.imports.gc]
+source = "https://github.com/gastownhall/gascity-packs/tree/main/gascity/roles"
+version = "sha:3b3b89f2011e06d84459aa7bea1552382f13930a"
+
+# A task enters the system explicitly; no idle LLM watchdog is started.
+[[patches.agent]]
+name = "dog"
+suspended = true
+
+[[patches.agent]]
+name = "codex"
+max_active_sessions = 23
+
+[[patches.agent]]
+name = "codex"
+rig = "mu-core"
+pre_start = ["python3 /usr/local/lib/mu-runtime/provision_worker.py --rig-root '{{.RigRoot}}' --work-dir '{{.WorkDir}}' --slot '{{.AgentBase}}'"]

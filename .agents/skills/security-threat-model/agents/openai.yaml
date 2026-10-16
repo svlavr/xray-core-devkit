@@ -1,0 +1,7 @@
+interface:
+  display_name: "Xray Core Threat Model"
+  short_description: "Model fork trust boundaries and abuse paths"
+  default_prompt: "Use $security-threat-model to create an evidence-grounded threat model for the requested Xray fork scope."
+
+policy:
+  allow_implicit_invocation: true

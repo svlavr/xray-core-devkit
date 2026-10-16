@@ -1,0 +1,4 @@
+interface:
+  display_name: "xray-public-ci"
+  short_description: "Reconcile exact-source unified-core CI results"
+  default_prompt: "Use $xray-public-ci for the current authorized Xray core task."

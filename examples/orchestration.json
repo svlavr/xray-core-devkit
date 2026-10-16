@@ -1,0 +1,10 @@
+{
+  "distribution": "Xray-Workers",
+  "user": "worker",
+  "city": "/srv/xray-city",
+  "rig_root": "/srv/xray-city/mu-core",
+  "queue_origin": "/srv/xray-queues/source.git",
+  "worktree_base": "/srv/xray-worktrees",
+  "analysis_tools": "/home/worker/xray-tools",
+  "http_proxy": ""
+}

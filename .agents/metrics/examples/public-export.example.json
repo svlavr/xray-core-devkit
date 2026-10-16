@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "public_anchor": "1111111111111111111111111111111111111111",
+  "public_url": "https://example.invalid/owner/export.git",
+  "public_ref": "refs/heads/export",
+  "anchor_ref": "refs/heads/clean-anchor",
+  "paths": [
+    "example/main.go"
+  ],
+  "ci_blobs": {},
+  "historical_only": {}
+}

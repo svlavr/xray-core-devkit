@@ -1,0 +1,4 @@
+interface:
+  display_name: "xray-core-start"
+  short_description: "Initialize the managed core checkout and scope"
+  default_prompt: "Use $xray-core-start for the current authorized Xray core task."

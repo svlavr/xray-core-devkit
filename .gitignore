@@ -1,0 +1,9 @@
+.local/
+.codex/config.toml
+.codex/hooks.json
+.codex-remote-attachments/
+**/__pycache__/
+*.pyc
+node_modules/
+.env
+auth.json

@@ -1,0 +1,8 @@
+Xray Core DevKit
+
+This distribution contains development instructions, configuration and tooling.
+The included toolkit source is provided under the Mozilla Public License 2.0.
+It does not include an Xray runtime or a downstream application's source.
+
+Third-party tools and services are obtained separately and retain their own
+licenses, attribution and access requirements. See THIRD_PARTY_NOTICES.md.

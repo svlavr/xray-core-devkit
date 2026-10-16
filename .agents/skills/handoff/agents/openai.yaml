@@ -1,0 +1,4 @@
+interface:
+  display_name: "handoff"
+  short_description: "Apply the current bounded Xray core workflow"
+  default_prompt: "Use $handoff for the current authorized Xray core task."

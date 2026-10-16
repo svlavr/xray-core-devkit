@@ -1,0 +1,7 @@
+interface:
+  display_name: "Xray Core Adversarial Reviewer"
+  short_description: "Find runtime, security, and upstream-sync risks"
+  default_prompt: "Use $adversarial-reviewer to critically review the substantial Xray Core change and return evidence-backed findings."
+
+policy:
+  allow_implicit_invocation: true

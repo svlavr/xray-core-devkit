@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "modules": {
+    "feature_a": {
+      "prefixes": [
+        "example/feature-a/"
+      ],
+      "paths": []
+    },
+    "feature_b": {
+      "prefixes": [
+        "example/feature-b/"
+      ],
+      "paths": []
+    }
+  },
+  "shared_fork_paths": [
+    "example/shared.go"
+  ],
+  "semantic_map": ".agents/metrics/shared-integration.json"
+}

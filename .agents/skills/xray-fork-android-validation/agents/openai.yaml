@@ -1,0 +1,4 @@
+interface:
+  display_name: "xray-fork-android-validation"
+  short_description: "Apply the current bounded Xray core workflow"
+  default_prompt: "Use $xray-fork-android-validation for the current authorized Xray core task."

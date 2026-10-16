@@ -1,0 +1,6 @@
+{
+  "explore": {"model": "gpt-6-luna", "effort": "high", "target": "mu-explorer", "max_active": 23},
+  "implement": {"model": "gpt-6.1-sol", "effort": "high", "target": "mu-core/codex", "max_active": 23},
+  "review": {"model": "gpt-6.1-sol", "effort": "high", "target": "mu-reviewer", "max_active": 23},
+  "deep": {"model": "gpt-6-astra", "effort": "high", "target": "mu-deep", "max_active": 1}
+}
