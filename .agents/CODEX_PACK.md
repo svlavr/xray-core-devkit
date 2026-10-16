@@ -62,6 +62,8 @@ native child cards. Report observed overlap separately from configured capacity.
 Roles: `mu_explorer` (Luna high); `mu_investigator`,
 `mu_upstream_researcher`, `mu_go_worker`, `mu_reviewer`,
 `mu_performance_reviewer`, `mu_critical_reviewer` (Sol 6.1 high);
+`mu_solution_researcher`, `mu_behavior_reviewer` and
+`mu_simplicity_reviewer` also use Sol 6.1 high;
 `mu_deep_reviewer` (Astra high, one named unresolved discriminator after Sol).
 The distributed model policy is: `gpt-6-luna` high for narrow
 exploration, `gpt-6.1-sol` high for ordinary roles and external worker defaults,
@@ -85,6 +87,27 @@ worker for an accepted disjoint write set. Stable non-trivial diffs receive
 independent review: ordinary reviewer for correctness/process, performance
 reviewer for hot-path claims, critical reviewer for substantial concurrency,
 security, shared runtime, Android or release boundaries.
+
+## Complete engineering outcomes
+
+For new capabilities and changes to existing behavior use
+`xray-feature-delivery`; use `xray-solution-research` when the approach needs
+evidence. The solution researcher compares native/direct/external approaches;
+behavior and simplicity reviewers independently check actual consumer wiring
+and unnecessary machinery. Main can run independent research, validation design,
+disjoint implementation owners and applicable reviews concurrently. Select the
+ready work from dependencies, not a fixed small team or a 23-worker quota.
+
+Requirements can be mistaken or revised on evidence. Explain the deciding facts
+and update the actual task scope; escalate material unresolved human choices.
+Do not silently omit agreed behavior, finish only infrastructure, or reclassify
+unfinished functions as optional future work to close the task. Intermediate
+slices are execution steps toward the full justified outcome, not permission
+to stop early. Choose simple complete implementations, with safeguards justified
+by real behavior rather than speculative wrappers or placeholder success.
+Clear direct changes need no mandatory architecture package. The public process
+and adaptation boundary are in
+`docs/WORKFLOW.md#practical-solution-research-and-complete-delivery`.
 
 ## Dispatch and review
 
@@ -174,12 +197,15 @@ separate. Fresh processes are required to adopt edited launchers/configuration;
 do not restart another active chat globally. Session launchers also own child
 TEMP and lifetime; direct desktop validation still uses the managed runner.
 
-Windows gopls, GitNexus, sandboxed Repomix and Context7 are enabled for fresh
+Windows gopls, GitNexus, sandboxed Repomix, Context7 and grep.app are enabled for fresh
 primary sessions. Android remains opt-in. No index is built merely at startup.
 Repomix can read the selected checkout and owner-approved contracts; its sandbox
 restricts paths to that root, not to files cleared for public disclosure. Request narrow include patterns and
 exclude `.local` raw evidence from bundles. Context7 receives public documentation
-queries, never private source or contracts. Worker profiles bind their own source
+queries, and grep.app receives public code-example queries through `searchGitHub`;
+neither receives private source, contracts, credentials or logs. Inspect actual
+source, its revision and license before reuse. Worker profiles include these
+remote discovery services and bind semantic tools to their own source
 root; do not multiply primary-root services across isolated workers.
 Never treat missing tools/package loads as an empty reference inventory.
 

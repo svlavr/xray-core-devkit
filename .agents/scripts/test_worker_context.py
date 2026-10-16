@@ -36,12 +36,33 @@ class WorkerGuardTests(unittest.TestCase):
             self.assertEqual(marker['base'],'a'*40)
             guidance=(repo/'.codex/config.toml').read_text(encoding='utf-8')
             parsed=tomllib.loads(guidance)
+            self.assertEqual(parsed['mcp_servers']['xray_gopls_worker']['args'],[
+                str(Path(worker_context.__file__).with_name('go_mcp.py').resolve()),'--binary',
+                str(tools/'bin'/('gopls.exe' if os.name=='nt' else 'gopls')),'--root',str(repo)])
             self.assertEqual(parsed['mcp_servers']['xray_gopls_worker']['args'][-1],str(repo))
             self.assertIn(str(tools),parsed['mcp_servers']['xray_gopls_worker']['args'][2])
+            self.assertFalse(parsed['agents']['enabled'])
+            self.assertNotIn('model',parsed)
+            self.assertEqual(set(parsed['mcp_servers']),{'xray_gopls_worker','context7','grep_app'})
+            self.assertEqual(parsed['mcp_servers']['context7'],{
+                'enabled':True,'url':'https://mcp.context7.com/mcp',
+                'startup_timeout_sec':60,'tool_timeout_sec':60})
+            self.assertEqual(parsed['mcp_servers']['grep_app'],{
+                'enabled':True,'default_tools_approval_mode':'auto','url':'https://mcp.grep.app',
+                'enabled_tools':['searchGitHub'],'startup_timeout_sec':60,'tool_timeout_sec':60})
             self.assertIn('docs/PROJECT_SCOPE.md',guidance)
             self.assertNotIn('.private',guidance)
             self.assertIn('enabled = false',guidance)
             self.assertIn('never publish to GitHub',guidance)
+            legacy=guidance.replace(
+                '[mcp_servers.grep_app]\nenabled = true\ndefault_tools_approval_mode = "auto"',
+                '[mcp_servers.grep_app]\nenabled = false\ndefault_tools_approval_mode = "deny"'
+                '\nbearer_token_env_var = "OLD_SEARCH_TOKEN"\ndisabled_tools = ["searchGitHub"]')
+            (repo/'.codex/config.toml').write_text(legacy,encoding='utf-8',newline='\n')
+            with patch.object(worker_context.subprocess,'check_output',side_effect=git):
+                worker_context.setup(repo,'base',str(queue),tools)
+            regenerated=tomllib.loads((repo/'.codex/config.toml').read_text(encoding='utf-8'))
+            self.assertEqual(regenerated,parsed)
 
     def test_installed_adapter_dependency_uses_worker_owned_scratch(self):
         binary=Path(os.environ['XRAY_TEST_GOPLS']) if os.environ.get('XRAY_TEST_GOPLS') else Path(shutil.which('gopls') or '__missing_gopls__')

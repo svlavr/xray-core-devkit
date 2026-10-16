@@ -57,6 +57,10 @@ scripts. Those linked files are part of the distribution.
   implementation, indexing or publication.
 - [xray-fork-research](../.agents/skills/xray-fork-research/SKILL.md): investigate
   upstream behavior, dependencies, licensing and source evidence.
+- [xray-solution-research](../.agents/skills/xray-solution-research/SKILL.md):
+  compare native, direct and external implementations before choosing machinery.
+- [xray-feature-delivery](../.agents/skills/xray-feature-delivery/SKILL.md): finish
+  justified consumer behavior, including integration and independent verification.
 - [xray-code-analysis](../.agents/skills/xray-code-analysis/SKILL.md): trace Go
   ownership, references, consumers and removal questions for the selected build.
 - [xray-fork-implement](../.agents/skills/xray-fork-implement/SKILL.md): implement
@@ -77,7 +81,7 @@ scripts. Those linked files are part of the distribution.
   changes, evidence and remaining gates for continuation.
 
 Main keeps the human-selected primary model and owns integration, validation
-and Git. Eight domain roles provide bounded assignments:
+and Git. Eleven domain roles provide bounded assignments:
 
 - [mu_explorer](../.codex/agents/mu_explorer.toml): one narrow read-only code path;
   `gpt-6-luna`, high.
@@ -85,6 +89,12 @@ and Git. Eight domain roles provide bounded assignments:
   question spanning files or subsystems; `gpt-6.1-sol`, high.
 - [mu_upstream_researcher](../.codex/agents/mu_upstream_researcher.toml): external,
   upstream, dependency or licensing evidence; `gpt-6.1-sol`, high.
+- [mu_solution_researcher](../.codex/agents/mu_solution_researcher.toml): practical
+  implementation comparison and deciding experiments; `gpt-6.1-sol`, high.
+- [mu_behavior_reviewer](../.codex/agents/mu_behavior_reviewer.toml): verify changed
+  behavior through its real caller; `gpt-6.1-sol`, high.
+- [mu_simplicity_reviewer](../.codex/agents/mu_simplicity_reviewer.toml): challenge
+  unnecessary machinery while preserving justified behavior; `gpt-6.1-sol`, high.
 - [mu_go_worker](../.codex/agents/mu_go_worker.toml): an accepted disjoint Go write
   set and its validation; `gpt-6.1-sol`, high.
 - [mu_reviewer](../.codex/agents/mu_reviewer.toml): stable-diff correctness,

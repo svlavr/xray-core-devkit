@@ -23,6 +23,12 @@ Use one authoritative typed contract at a selected external boundary; applicatio
 policy, identity, rates/history/ranking and scheduling stay with their actual
 owner unless the human's accepted scope explicitly places them here.
 
+For new or changed behavior apply `xray-feature-delivery` and use
+`xray-solution-research` for unresolved approaches. Preserve the full justified
+task through final verification; revise requirements on evidence openly rather
+than silently leaving agreed functions for a future task. This also applies to
+repairs and refactoring: simplicity preserves the required outcome.
+
 Main follows CODEX_PACK for early independent lanes, disjoint workers and stable
 independent review. Workers are not alone and preserve others' edits. Native
 children never change Git; external workers with owner-generated worker context

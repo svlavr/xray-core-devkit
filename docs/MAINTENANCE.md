@@ -2,7 +2,7 @@
 
 Edit the public toolkit in this repository. Installed users deliberately accept
 copies through `devkit.py`; the distribution does not synchronize existing
-projects automatically. Keep all eleven skills, eight roles and their linked
+projects automatically. Keep all thirteen skills, eleven roles and their linked
 references unless the human selects a change. See the [file map](FILES.md) for
 ownership and [configuration](CONFIGURATION.md) for maintained settings sources.
 
@@ -33,7 +33,7 @@ python .agents/scripts/workspace.py validate
 ```
 
 The first command exercises install/update, packaging and public-audit fixtures.
-The second checks the eleven skill entrypoints and eight role policies without
+The second checks the thirteen skill entrypoints and eleven role policies without
 requiring source-host context. In installed checkouts, extra source-owned skills
 and roles are reported separately and preserved. This is not `workspace.py
 verify`, which checks an installed source checkout.

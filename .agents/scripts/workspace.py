@@ -20,10 +20,12 @@ TEMP_PROBE = '.local/workspace/.setup-probe.tmp'
 PROJECT_KEYS = {'baseline', 'expected_branch', 'integrating_url', 'integrating_branch',
                 'public_url', 'public_branch', 'anchor', 'public_push_mode'}
 MANAGED_ROLES = {'mu_explorer', 'mu_investigator', 'mu_upstream_researcher', 'mu_go_worker',
-                 'mu_reviewer', 'mu_critical_reviewer', 'mu_performance_reviewer', 'mu_deep_reviewer'}
+                 'mu_reviewer', 'mu_critical_reviewer', 'mu_performance_reviewer', 'mu_deep_reviewer',
+                 'mu_solution_researcher', 'mu_behavior_reviewer', 'mu_simplicity_reviewer'}
 MANAGED_SKILLS = {'adversarial-reviewer', 'handoff', 'security-threat-model', 'xray-code-analysis',
                   'xray-core-start', 'xray-fork-android-validation', 'xray-fork-checkpoint',
-                  'xray-fork-implement', 'xray-fork-research', 'xray-orchestration', 'xray-public-ci'}
+                  'xray-fork-implement', 'xray-fork-research', 'xray-orchestration', 'xray-public-ci',
+                  'xray-solution-research', 'xray-feature-delivery'}
 
 
 def context_path():
@@ -159,6 +161,7 @@ def configuration(python, analysis_tools=None, node=None):
         if repomix.is_file() and node:
             text += f'\n[mcp_servers.xray_repomix]\nenabled = true\ncommand = {quote(python)}\nargs = {json.dumps([str(ROOT / ".agents/scripts/resource_guard.py"), "--relay", "--", str(node), str(repomix), "--mcp", "--sandbox", str(ROOT)], ensure_ascii=False)}\nstartup_timeout_sec = 60\ntool_timeout_sec = 240\n'
     text += '\n[mcp_servers.context7]\nenabled = true\nurl = "https://mcp.context7.com/mcp"\n'
+    text += '\n[mcp_servers.grep_app]\nenabled = true\ndefault_tools_approval_mode = "auto"\nurl = "https://mcp.grep.app"\nenabled_tools = ["searchGitHub"]\nstartup_timeout_sec = 60\ntool_timeout_sec = 60\n'
     return text
 
 

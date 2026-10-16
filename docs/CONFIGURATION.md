@@ -11,7 +11,7 @@ Run setup from that installed source root, as in
 Edit the maintained source of a setting, then regenerate and start fresh
 processes. The [file map](FILES.md) lists every component; the main inputs are:
 
-- `.codex/agents/*.toml`: eight role models, effort, role intent and task rules.
+- `.codex/agents/*.toml`: eleven role models, effort, role intent and task rules.
 - `.agents/orchestration/context.json`: nominal context window, effective
   percentage, compaction percentage, scope and required model family.
 - `.agents/scripts/language_policy.py`: shared primary/worker language text.
@@ -138,15 +138,15 @@ The generated config sets `features.multi_agent_v2 = true`, `agents.enabled =
 true`, default subagent model `gpt-6.1-sol`, default subagent effort `high`,
 `max_concurrent_threads_per_session = 23` and `interrupt_message = true`.
 Capacity remains subject to observed session/host limits. Role paths refer to
-all eight distributed TOML files; each disables nested native workers.
+all eleven distributed TOML files; each disables nested native workers.
 
-Validation requires the complete managed set of eleven skills and eight roles.
+Validation requires the complete managed set of thirteen skills and eleven roles.
 Source-owned extra skills/roles are preserved and reported separately as
 `additional_skills` and `additional_roles`. The generated layer explicitly
-registers only the eight managed roles; source-owned roles remain subject to
+registers only the eleven managed roles; source-owned roles remain subject to
 Codex's native discovery rather than being rewritten into the managed config.
 
-The eleven skills and eight roles are retained. `mu_explorer` uses
+The thirteen skills and eleven roles are retained. `mu_explorer` uses
 `gpt-6-luna` high, ordinary worker/review roles use `gpt-6.1-sol` high, and
 `mu_deep_reviewer` uses `gpt-6-astra` high for one evidenced unresolved question.
 Main's model and effort are not overridden. Internal tasks, reports and docs use
@@ -192,7 +192,7 @@ in [workflow](WORKFLOW.md).
 
 ## MCP settings
 
-Windows gopls, GitNexus and Context7 are enabled. Android gopls is configured but
+Windows gopls, GitNexus, Context7 and grep.app are enabled. Android gopls is configured but
 initially disabled. Repomix is included only when its installed backend file and
 a Node executable are available at generation time. Both Go profiles expose
 `go_workspace`, `go_search`, `go_file_context`, `go_package_api`,
@@ -203,6 +203,14 @@ Local MCP entries have a 60-second startup limit and 240-second tool limit.
 Go/GitNexus entries request `default_tools_approval_mode = "auto"`; parent
 permissions still govern actual access. Context7 uses
 `https://mcp.context7.com/mcp` and receives public documentation queries only.
+grep.app uses `https://mcp.grep.app` for public GitHub code examples, with only
+`searchGitHub` enabled, automatic tool approval, and 60-second startup/tool
+deadlines. Both services are configured in primary and generated external-worker
+profiles. Send public queries only; never transmit private source, contracts,
+credentials or logs. Review the source revision, actual caller and applicable
+license before adopting a result. Service approval settings do not override
+the parent session's effective permissions. Fresh sessions adopt regenerated
+configuration; existing sessions may retain their prior MCP catalog.
 Repomix uses the managed relay and a sandbox rooted at the selected checkout;
 that root restriction is not a public-disclosure allowlist.
 

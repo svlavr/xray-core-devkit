@@ -20,6 +20,15 @@ report what changed. Preserve unrelated dirty work. Verify reachable consumers
 before removing an API, function, variable or file. Ask about ambiguous behavior
 or authority before dependent edits; continue independent authorized work.
 
+For new or changed capabilities use `xray-feature-delivery` and, when the approach
+is uncertain, `xray-solution-research`. Compare current native/configuration,
+small direct and applicable external implementations through real source and
+deciding experiments. Deliver the whole justified behavior through its actual
+consumer. Requirements can be revised on evidence with reasons; resolve material
+human choices, and never silently omit agreed work or relabel unfinished behavior
+as optional future work. Clear changes need no mandatory architecture package.
+See `docs/WORKFLOW.md#practical-solution-research-and-complete-delivery`.
+
 Main retains the human-selected model and owns integration, validation and Git.
 Use one writer per checkout. Assign exact disjoint write sets; independent
 writers use isolated worktrees with one integrator. Native children do not
@@ -38,7 +47,8 @@ when scope or prerequisites change. Do not duplicate jobs across pools.
 
 Roles retain their distributed names: `mu_explorer` uses `gpt-6-luna` high;
 `mu_investigator`, `mu_upstream_researcher`, `mu_go_worker`, `mu_reviewer`,
-`mu_performance_reviewer` and `mu_critical_reviewer` use `gpt-6.1-sol` high.
+`mu_performance_reviewer`, `mu_critical_reviewer`, `mu_solution_researcher`,
+`mu_behavior_reviewer` and `mu_simplicity_reviewer` use `gpt-6.1-sol` high.
 `mu_deep_reviewer` uses `gpt-6-astra` high for one named technical discriminator
 left unresolved after Sol and supplied with its evidence. Missing input,
 authority, access or validation is not a model-escalation trigger. Only one Astra

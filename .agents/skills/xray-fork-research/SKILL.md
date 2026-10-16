@@ -10,6 +10,11 @@ exact baseline. Define one neutral
 question and a bounded verdict: UPSTREAM_HAS_IT, FORK_GAP, PARTIAL, NOT_NEEDED,
 DEFER or EXPERIMENT_REQUIRED. Current official source and accepted contracts
 precede current fork evidence, matched experiments and external implementations.
+This order establishes authority and the starting context, not empirical truth.
+Test technical assumptions in requirements against actual code and observations;
+revise unjustified assumptions with reasons within the authorized task. Use
+`xray-solution-research` for practical implementation choices in new or existing
+code. A routine repair does not require a new formal architecture document.
 
 At the start of a substantial multi-owner review, split independent evidence
 questions and dispatch them together with `xray-orchestration` before reading

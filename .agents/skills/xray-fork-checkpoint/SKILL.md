@@ -14,6 +14,11 @@ routine permission; otherwise preserve the reviewed result and report its exact
 local state. Complete all authorized review/validation before seeking any
 additional, actually required Git permission.
 
+An intermediate checkpoint records progress of its owned slice. It does not
+close the enclosing user task while justified required behavior remains
+unfinished. Reconcile actual delivery and evidence-based scope revisions before
+reporting that parent task complete.
+
 Require the actual integrated bytes, independent review and relevant validation.
 A worker commit, closed Beads item or session-stop event alone is not acceptance.
 Main alone owns integration and Git publication. External worker commits remain

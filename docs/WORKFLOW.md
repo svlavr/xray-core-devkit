@@ -31,6 +31,47 @@ Preserve native errors, packet destinations, byte boundaries, batching, resource
 custody and explicit partial/unknown outcomes. Product policy stays with its
 actual external owner unless the accepted contract explicitly selects it here.
 
+## Practical solution research and complete delivery
+
+Use [solution research](../.agents/skills/xray-solution-research/SKILL.md) when a
+new or existing capability has an uncertain mechanism or integration. Compare
+reachable native behavior, a direct change at its owner, and practical external
+implementations. Read actual source and caller examples; public code search is
+a discovery aid, not proof that a result fits this checkout or its license.
+Run a small deciding experiment when evidence leaves a material question open.
+A clear direct change needs no mandatory design document or framework.
+
+Use [feature delivery](../.agents/skills/xray-feature-delivery/SKILL.md) to carry
+the justified behavior through its actual input, runtime wiring and consumer.
+Research, implementation and review are parts of completing that outcome.
+Intermediate slices and spikes do not silently reduce the final scope. Do not
+declare completion while agreed behavior remains a stub, is unwired, or has
+been renamed optional future work. Resolve authorized integration and tooling
+work rather than leaving it as an installation proposal.
+
+Requirements can be revised when evidence shows they are unjustified or conflict
+with the goal. Explain material changes and resolve genuinely open human product
+or authority choices. Keep a concise account of delivered, revised and blocked
+outcomes using the existing task record; a new ledger is not mandatory.
+
+Choose the least machinery that delivers the whole justified result. Wrappers,
+validation, retries, fallbacks and extension points need a concrete consumer or
+reachable failure. Preserve real errors, cancellation and resource ownership;
+missing behavior must not report placeholder success. Apply this to existing
+code as well as new work, without a line-count target or speculative defenses.
+
+The solution researcher compares complete alternatives. The behavior reviewer
+independently follows the real caller and relevant failures. The simplicity
+reviewer challenges unnecessary layers while preserving the required outcome.
+Use these roles where their independent work adds value, alongside the existing
+correctness, performance and critical reviewers. Tests should detect a meaningful
+broken behavior; file presence, mocks and a successful build do not establish
+consumer integration. Record only checks actually executed and their scope.
+
+These responsibilities adapt focused ideas from the public projects credited in
+[third-party notices](../THIRD_PARTY_NOTICES.md#workflow-responsibility-references).
+The DevKit retains its own project authority, models and orchestration.
+
 ## Parallel ownership and review
 
 Use the [agent pack](../.agents/CODEX_PACK.md),

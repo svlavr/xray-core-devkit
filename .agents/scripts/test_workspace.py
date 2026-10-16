@@ -6,6 +6,7 @@ import shutil
 import stat
 import subprocess
 import tempfile
+import tomllib
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
@@ -42,7 +43,7 @@ class WorkspaceTests(unittest.TestCase):
         return value
 
     def setup(self, **kwargs):
-        with patch.object(workspace, 'validate', return_value={'roles': 8, 'skills': 11}):
+        with patch.object(workspace, 'validate', return_value={'roles': 11, 'skills': 13}):
             return workspace.setup(self.root, catalog=self.root / 'absent-catalog.json', **kwargs)
 
     def test_fresh_official_checkout_without_private_context_or_named_remotes(self):
@@ -159,6 +160,25 @@ class WorkspaceTests(unittest.TestCase):
             self.setup()
         self.assertEqual(config.read_text(), content)
 
+    def test_regeneration_replaces_managed_remote_server_auth_and_denials(self):
+        self.setup()
+        config = self.root / '.codex/config.toml'
+        context = workspace.context_path()
+        legacy = config.read_text().replace(
+            '[mcp_servers.grep_app]\nenabled = true\ndefault_tools_approval_mode = "auto"',
+            '[mcp_servers.grep_app]\nenabled = false\ndefault_tools_approval_mode = "deny"'
+            '\nbearer_token_env_var = "OLD_SEARCH_TOKEN"\ndisabled_tools = ["searchGitHub"]')
+        config.write_text(legacy, encoding='utf-8', newline='\n')
+        prior = json.loads(context.read_text())
+        # Model an earlier toolkit-generated config, not an unapproved user edit.
+        prior['generated_config_sha256'] = workspace.hashlib.sha256(config.read_bytes()).hexdigest()
+        context.write_text(json.dumps(prior), encoding='utf-8', newline='\n')
+        self.setup()
+        server = tomllib.loads(config.read_text())['mcp_servers']['grep_app']
+        self.assertEqual(server, {
+            'enabled': True, 'default_tools_approval_mode': 'auto', 'url': 'https://mcp.grep.app',
+            'enabled_tools': ['searchGitHub'], 'startup_timeout_sec': 60, 'tool_timeout_sec': 60})
+
     def test_interrupted_configuration_pair_can_retry_without_false_manual_edit(self):
         self.setup()
         config = self.root / '.codex/config.toml'
@@ -244,7 +264,7 @@ class ConfigurationTests(unittest.TestCase):
             role.write_text('name="source_helper"\ndescription="Source helper"\ndeveloper_instructions="Read source"\n')
             with patch.object(workspace, 'ROOT', root):
                 result = workspace.validate()
-                self.assertEqual((result['skills'], result['roles']), (11, 8))
+                self.assertEqual((result['skills'], result['roles']), (13, 11))
                 self.assertEqual(result['additional_skills'], ['source-local-helper'])
                 self.assertEqual(result['additional_roles'], ['source_helper'])
                 self.assertNotIn('[agents.source_helper]', workspace.configuration('python'))
@@ -275,10 +295,14 @@ class ConfigurationTests(unittest.TestCase):
         self.assertNotIn('model_reasoning_effort', config)
         self.assertEqual(config['agents']['max_concurrent_threads_per_session'], 23)
         self.assertEqual(config['agents']['default_subagent_model'], 'gpt-6.1-sol')
+        self.assertTrue(workspace.MANAGED_ROLES.issubset(config['agents']))
         self.assertFalse(config['mcp_servers']['xray_gopls_android']['enabled'])
         self.assertTrue(config['mcp_servers']['xray_gopls_windows']['enabled'])
         self.assertTrue(config['mcp_servers']['xray_gitnexus']['enabled'])
         self.assertEqual(config['mcp_servers']['context7']['url'], 'https://mcp.context7.com/mcp')
+        self.assertEqual(config['mcp_servers']['grep_app'], {
+            'enabled': True, 'default_tools_approval_mode': 'auto', 'url': 'https://mcp.grep.app',
+            'enabled_tools': ['searchGitHub'], 'startup_timeout_sec': 60, 'tool_timeout_sec': 60})
 
     def test_repomix_requires_installed_backend_and_node(self):
         with tempfile.TemporaryDirectory() as directory:

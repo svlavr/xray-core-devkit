@@ -27,6 +27,15 @@ launcher checks distribution settings and the current mount inventory.
 
 ## Early parallel admission
 
+For capability development, apply `xray-feature-delivery`. Ready candidates can
+include native/direct solution research, independent external examples,
+consumer-level verification design, disjoint implementation owners, behavior
+review and simplicity review. Research selects the approach; it is not a
+substitute for implementing and checking all justified requested behavior.
+Requirements may change on evidence, with the reason and resulting scope
+explicit. Do not close a partial implementation by moving agreed functions to
+an unrequested optional future phase. Recompute dependencies after revisions.
+
 Before dispatch, persist a ready-frontier receipt under `.local/` with all
 material candidate outputs, owners, prerequisites/input readiness and chosen
 native/external lane. Record configured capacity, this chat's observed slots,

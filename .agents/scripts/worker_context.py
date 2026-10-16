@@ -63,6 +63,8 @@ def setup(repo, base, queue_origin, tools):
     config+='startup_timeout_sec = 60\ntool_timeout_sec = 240\n'
     config+='enabled_tools = ["go_workspace", "go_search", "go_file_context", "go_package_api", "go_symbol_references", "go_diagnostics"]\n'
     config+='[mcp_servers.xray_gopls_worker.env]\nGOOS = '+json.dumps(profile,ensure_ascii=False)+'\nGOARCH = "amd64"\nCGO_ENABLED = "0"\nGOFLAGS = "-mod=readonly"\nGOMAXPROCS = "2"\n'
+    config+='\n[mcp_servers.context7]\nenabled = true\nurl = "https://mcp.context7.com/mcp"\nstartup_timeout_sec = 60\ntool_timeout_sec = 60\n'
+    config+='\n[mcp_servers.grep_app]\nenabled = true\ndefault_tools_approval_mode = "auto"\nurl = "https://mcp.grep.app"\nenabled_tools = ["searchGitHub"]\nstartup_timeout_sec = 60\ntool_timeout_sec = 60\n'
     (repo/'.codex').mkdir(exist_ok=True)
     (repo/'.codex/config.toml').write_text(config,encoding='utf-8',newline='\n')
     return {'status':'WORKER_CONFIGURED','root':str(repo),'base':base_sha,'profile':profile}

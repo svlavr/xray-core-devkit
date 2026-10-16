@@ -11,6 +11,9 @@ Link the accepted task/plan and already verified source/build receipts rather
 than copying their history. List concrete blockers, dependencies, authority and
 the next bounded action. Keep source, toolkit, local checkpoint and filtered
 public export identities distinct; state the actual Git/publication policy.
+Carry remaining required outcomes and evidence-based scope revisions explicitly.
+An intermediate slice or checkpoint must not silently narrow the enclosing
+user request or turn unfinished behavior into optional future work.
 
 Stale notes and green source tests do not prove integrated runtime, artifact,
 device, network, performance or release readiness. No historical architecture,

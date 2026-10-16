@@ -4,8 +4,8 @@
 [File map](docs/FILES.md) ·
 [Download ZIP](https://github.com/svlavr/xray-core-devkit/archive/refs/heads/main.zip)
 
-The complete configured Codex toolkit we use for Xray-core development: eleven
-skills, eight specialized agent roles, Go code intelligence, MCP process control,
+The complete configured Codex toolkit we use for Xray-core development: thirteen
+skills, eleven specialized agent roles, Go code intelligence, MCP process control,
 source accounting, review, Android artifact qualification, guarded source exports
 and Gas City orchestration.
 
@@ -87,8 +87,12 @@ source task, behavior contract, baseline, write set and Git policy.
 
 - **Skills and roles:** startup, research, Go analysis, implementation,
   orchestration, review, threat modeling, Android qualification, checkpoint,
-  public CI and handoff. [All eleven skills and eight roles](docs/README.md#skills-and-roles)
+  public CI and handoff. [All thirteen skills and eleven roles](docs/README.md#skills-and-roles)
   remain available.
+- **Complete delivery:** compare practical implementations, carry justified
+  behavior through its real consumer, and review behavior and simplicity.
+  Requirements can change on evidence; unfinished agreed work stays visible.
+  [Delivery workflow](docs/WORKFLOW.md#practical-solution-research-and-complete-delivery)
 - **Model routing:** Luna High for narrow exploration, Sol 6.1 High for ordinary
   roles, and one Astra High adviser for a named technical question unresolved by
   Sol. The primary model stays the user's choice. Native capacity is 23, subject
@@ -96,7 +100,7 @@ source task, behavior contract, baseline, write set and Git policy.
 - **Context:** 872000 nominal tokens, 95% effective capacity and compaction at
   80% of effective capacity, scope `total`. Local catalog checks do not grant
   account access or prove that an existing session adopted these settings.
-- **MCP and analysis:** pinned gopls v0.23.0, GitNexus, Context7, Repomix when
+- **MCP and analysis:** pinned gopls v0.23.0, GitNexus, Context7, grep.app public code search, Repomix when
   installed, ast-grep, package maps and deadcode. The Windows Go profile is
   enabled; Android Go is configured and initially disabled.
 - **Process control:** owned descendant trees, isolated scratch, bounded I/O,

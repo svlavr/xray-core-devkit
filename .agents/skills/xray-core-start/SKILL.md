@@ -39,3 +39,7 @@ Use supplied current contracts/evidence, not a historical framework by associati
 Record owners/state/locks/interfaces/dependencies and validation/stop rules before
 editing. Startup never starts another task, refreshes an index, runs a platform
 matrix, fetches, commits, pushes or exports source.
+For uncertain capability work route to `xray-solution-research` and
+`xray-feature-delivery`. Current contracts guide ownership and authorization;
+their technical assumptions can be challenged on evidence. A routine authorized
+repair does not require creating a new architecture package.

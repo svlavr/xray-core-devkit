@@ -45,6 +45,8 @@ Each maintained `SKILL.md` has discovery metadata. Codex reads a selected skill 
 - [handoff/SKILL.md](../.agents/skills/handoff/SKILL.md): compact continuation evidence for a requested handoff.
 - [security-threat-model/SKILL.md](../.agents/skills/security-threat-model/SKILL.md): repository-grounded AppSec modeling when explicitly requested.
 - [xray-code-analysis/SKILL.md](../.agents/skills/xray-code-analysis/SKILL.md): Go ownership/references/dependencies/removal evidence.
+- [xray-solution-research/SKILL.md](../.agents/skills/xray-solution-research/SKILL.md): practical native/direct/external implementation comparison.
+- [xray-feature-delivery/SKILL.md](../.agents/skills/xray-feature-delivery/SKILL.md): complete justified behavior through its consumer and verification.
 - [xray-core-start/SKILL.md](../.agents/skills/xray-core-start/SKILL.md): read-only startup/root/ref/policy reporting.
 - [xray-fork-android-validation/SKILL.md](../.agents/skills/xray-fork-android-validation/SKILL.md): accepted Android artifact/ABI/lifecycle/resource validation.
 - [xray-fork-checkpoint/SKILL.md](../.agents/skills/xray-fork-checkpoint/SKILL.md): reviewed exact-path checkpoint under human-selected Git policy.
@@ -72,15 +74,18 @@ The ten `agents/openai.yaml` files below provide skill UI labels, short descript
 - [xray-fork-research/agents/openai.yaml](../.agents/skills/xray-fork-research/agents/openai.yaml)
 - [xray-public-ci/agents/openai.yaml](../.agents/skills/xray-public-ci/agents/openai.yaml)
 
-`xray-orchestration` has no bundled `agents/openai.yaml`; its discovery metadata is in its skill frontmatter.
+`xray-orchestration`, `xray-solution-research` and `xray-feature-delivery` have no bundled `agents/openai.yaml`; their discovery metadata is in their skill frontmatter.
 
 ## Native roles and policy settings
 
-`workspace.py` reads eight maintained roles when generating/validating `.codex/config.toml`; `session.py` passes absolute role paths to a fresh Codex invocation. Codex reads the selected definition when creating a child. Stable role names do not identify source ownership.
+`workspace.py` reads eleven maintained roles when generating/validating `.codex/config.toml`; `session.py` passes absolute role paths to a fresh Codex invocation. Codex reads the selected definition when creating a child. Stable role names do not identify source ownership.
 
 - [.codex/agents/mu_explorer.toml](../.codex/agents/mu_explorer.toml): narrow read-only exploration; Luna high.
 - [.codex/agents/mu_investigator.toml](../.codex/agents/mu_investigator.toml): bounded cross-file investigation; Sol 6.1 high.
 - [.codex/agents/mu_upstream_researcher.toml](../.codex/agents/mu_upstream_researcher.toml): external/upstream/dependency evidence; Sol 6.1 high.
+- [.codex/agents/mu_solution_researcher.toml](../.codex/agents/mu_solution_researcher.toml): practical native/direct/external implementation research; Sol 6.1 high.
+- [.codex/agents/mu_behavior_reviewer.toml](../.codex/agents/mu_behavior_reviewer.toml): real-caller behavior and integration verification; Sol 6.1 high.
+- [.codex/agents/mu_simplicity_reviewer.toml](../.codex/agents/mu_simplicity_reviewer.toml): remove unjustified machinery without omitting justified behavior; Sol 6.1 high.
 - [.codex/agents/mu_go_worker.toml](../.codex/agents/mu_go_worker.toml): assigned bounded implementation; Sol 6.1 high.
 - [.codex/agents/mu_reviewer.toml](../.codex/agents/mu_reviewer.toml): correctness/regressions/tests; Sol 6.1 high.
 - [.codex/agents/mu_performance_reviewer.toml](../.codex/agents/mu_performance_reviewer.toml): allocations/latency/hot paths/backpressure; Sol 6.1 high.

@@ -9,7 +9,12 @@
 5. issue, PR, release note, or dated project statement;
 6. historical/local behavior or community reports.
 
-Lower evidence may expose a gap but cannot silently override higher evidence.
+This is a starting-source preference, not an absolute truth ranking. Human
+instructions establish authority; code and matched observations establish actual
+behavior. A reproduced result can disprove a statement in a contract or upstream
+document. Explain contradictions and revise technical assumptions on evidence;
+return material unresolved product choices to the human. Do not silently replace
+the requested outcome or defer its missing implementation.
 
 ## Verdicts
 
