@@ -8,6 +8,7 @@ import unittest
 import subprocess
 import shutil
 import json
+import tomllib
 from mcp_backend import Backend
 from unittest.mock import patch
 import worker_context
@@ -16,8 +17,8 @@ import worker_context
 class WorkerGuardTests(unittest.TestCase):
     def test_worker_context_has_only_local_queue_and_public_scope_guidance(self):
         with tempfile.TemporaryDirectory() as directory:
-            root=Path(directory).resolve();repo=root/'repo';repo.mkdir()
-            queue=root/'queue.git';queue.mkdir();tools=root/'tools';(tools/'bin').mkdir(parents=True)
+            root=Path(directory).resolve();repo=root/'repo-\U0001f680';repo.mkdir()
+            queue=root/'queue.git';queue.mkdir();tools=root/'tools-\U0001f680';(tools/'bin').mkdir(parents=True)
             (tools/'bin'/('gopls.exe' if os.name=='nt' else 'gopls')).write_bytes(b'synthetic tool')
             (repo/'go.mod').write_text('module github.com/xtls/xray-core\n')
             def git(command,**kwargs):
@@ -33,7 +34,10 @@ class WorkerGuardTests(unittest.TestCase):
             marker=json.loads((repo/'.local/workspace/worker.json').read_text())
             self.assertEqual(marker['queue_origin'],str(queue))
             self.assertEqual(marker['base'],'a'*40)
-            guidance=(repo/'.codex/config.toml').read_text()
+            guidance=(repo/'.codex/config.toml').read_text(encoding='utf-8')
+            parsed=tomllib.loads(guidance)
+            self.assertEqual(parsed['mcp_servers']['xray_gopls_worker']['args'][-1],str(repo))
+            self.assertIn(str(tools),parsed['mcp_servers']['xray_gopls_worker']['args'][2])
             self.assertIn('docs/PROJECT_SCOPE.md',guidance)
             self.assertNotIn('.private',guidance)
             self.assertIn('enabled = false',guidance)

@@ -7,10 +7,13 @@ description: Initialize the explicitly selected Xray Core workspace and report e
 
 Read the current root's `AGENTS.md`, applicable `AGENTS.override.md`,
 `.agents/CODEX_PACK.md`, `docs/PROJECT_SCOPE.md`, `docs/WORKFLOW.md`, the human's
-accepted task/contract and ignored `.local/workspace/context.json`.
-Run `python .agents/scripts/check_core.py` from the explicitly configured root.
-A toolkit-only root may report tools/settings without a Go module; do not claim
-source/runtime readiness until the actual source and baseline are supplied.
+accepted task/contract and, for an installed source checkout, ignored
+`.local/workspace/context.json`. Run `python .agents/scripts/check_core.py`
+from that source root after workspace setup; it requires the Xray Go module.
+For toolkit-only maintenance, work from the DevKit root containing `devkit.py`
+and use `python devkit.py verify`, `python audit.py` and
+`python .agents/scripts/workspace.py validate`. These checks inspect the
+distribution and role/skill inventory; they establish no source/runtime readiness.
 
 An external worker with owner-generated `.local/workspace/worker.json` instead
 verifies its recorded root/base/local queue and actual Go MCP workspace. It

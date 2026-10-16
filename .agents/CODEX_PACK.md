@@ -21,6 +21,12 @@ public evidence/accounting process. This independent toolkit neither selects nor
 connects an existing source project. Startup reports facts; it never fetches,
 copies runtime, refreshes indexes, starts implementation or grants publication.
 
+For toolkit-only maintenance, the root containing `devkit.py` is the task root.
+Use `devkit.py verify`, `audit.py` and `workspace.py validate` there to inspect
+the distribution and skill/role inventory. `workspace.py setup` and
+`check_core.py` require an installed Xray source checkout; their results are
+source-root startup evidence and are not DevKit-root checks.
+
 Use one task for a small/coupled lookup. For a substantial task with two or more
 independent evidence lanes, dispatch them BEFORE detailed local investigation;
 do not perform each lane yourself and delegate only the last review. After the

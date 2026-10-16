@@ -255,6 +255,26 @@ def deploy_tools(data):
     (CONTEXT.parent/'deployed-worker-tools.json').write_text(json.dumps(hashes,indent=2)+'\n',encoding='utf-8')
 
 
+def configure_trusted_projects(path, roots):
+    """Initialize only missing dedicated-user config; preserve unrelated settings."""
+    if path.resolve()!=path.absolute() or (path.exists() and path.stat().st_nlink!=1):
+        raise RuntimeError('Codex user config must not alias another path')
+    try:
+        original=path.read_text(encoding='utf-8')
+        exists=True
+    except FileNotFoundError:
+        original='';exists=False
+    tomllib.loads(original)
+    text=original
+    for root in roots:
+        text=set_field(text,'projects.'+json.dumps(root,ensure_ascii=False),'trust_level','trusted')
+    tomllib.loads(text)
+    if text!=original:
+        path.parent.mkdir(parents=True,exist_ok=True)
+        with path.open('w' if exists else 'x',encoding='utf-8',newline='\n') as handle:
+            handle.write(text)
+
+
 def configure_advisers(data):
     from language_policy import WORKER_INSTRUCTIONS
     policy=json.loads((ROOT/'.agents/orchestration/models.json').read_text())
@@ -274,10 +294,7 @@ def configure_advisers(data):
         config+='[option_defaults]\nmodel = '+json.dumps(spec['model'])+'\neffort = '+json.dumps(spec['effort'])+'\n'
         (directory/'agent.toml').write_text(config,encoding='utf-8',newline='\n')
     user_config=prefix/'home'/data['user']/'.codex/config.toml'
-    text=user_config.read_text(encoding='utf-8')
-    text=set_field(text,'projects.'+json.dumps(data['rig_root']),'trust_level','trusted')
-    text=set_field(text,'projects.'+json.dumps(data['city']),'trust_level','trusted')
-    user_config.write_text(text,encoding='utf-8',newline='\n')
+    configure_trusted_projects(user_config,[data['rig_root'],data['city']])
 
 
 def check_models(data):
@@ -330,6 +347,29 @@ def reusable_wave(receipts, jobs, head, active_manifest):
                 raise RuntimeError('Open prepared wave differs from active dispatch; reconcile before preparing')
             return saved
     return None
+
+
+def reload_prepared_city(linux, city):
+    """Reload live GC, deferring only a positively observed stopped controller.
+
+    GC v1.5 cmd_citystatus.go resolves controller identity locally even when
+    agent rows are cached. A live supervisor with unknown city state reports
+    status='unknown'; it must not be mistaken for a stopped cold bootstrap.
+    """
+    status=json.loads(linux(['/usr/local/bin/gc','--city',city,'status','--json']))
+    controller=status.get('controller',{})
+    if (status.get('schema_version')!='1' or status.get('ok') is not True
+            or status.get('city_path')!=city or status.get('partial')
+            or status.get('partial_errors') or not isinstance(controller,dict)
+            or not isinstance(controller.get('running'),bool)):
+        raise RuntimeError('Cannot establish native controller state before reload')
+    if controller['running']:
+        linux(['/usr/local/bin/gc','--city',city,'reload'])
+        return 'applied'
+    state=controller.get('status','')
+    if (state=='stopped' or (state=='' and not controller.get('pid'))):
+        return 'deferred_stopped'
+    raise RuntimeError('Native controller state is not positively stopped: '+str(controller))
 
 
 def prepare(data):
@@ -417,12 +457,13 @@ def prepare(data):
             '--rig-root',rig,'--work-dir',workroot+'/codex-'+str(slot),
             '--slot','codex-'+str(slot)],timeout=120)
     config.write_text(rendered,encoding='utf-8',newline='\n')
-    linux(['/usr/local/bin/gc','--city',data['city'],'reload'])
+    reload_outcome=reload_prepared_city(linux,data['city'])
     receipts=CONTEXT.parent/'waves';receipts.mkdir(exist_ok=True)
     (receipts/(wave+'.json')).write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
     pending.unlink()
     print(json.dumps({'prepared':True,'source_head':head,'wave':wave,'capacity':23,
-                      'worktree_root':workroot,'provisioning':'native gc worktree ensure before pool admission; pre_start revalidates'}))
+                      'worktree_root':workroot,'reload':reload_outcome,
+                      'provisioning':'native gc worktree ensure before pool admission; pre_start revalidates'}))
 
 
 def main():

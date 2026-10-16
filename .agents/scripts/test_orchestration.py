@@ -21,6 +21,61 @@ class RuntimeConfigurationTests(unittest.TestCase):
         return {**json.loads((orchestration.ROOT/'examples/orchestration.json').read_text()),
                 'integration_root':str(orchestration.ROOT)}
 
+    def test_dedicated_codex_config_can_be_absent_and_preserves_other_settings(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target=Path(directory).resolve()/'.codex/config.toml'
+            roots=['/srv/xray-city','/srv/xray-city/mu-core']
+            orchestration.configure_trusted_projects(target,roots)
+            expected={root:{'trust_level':'trusted'} for root in roots}
+            self.assertEqual(tomllib.loads(target.read_text(encoding='utf-8'))['projects'],expected)
+            original='model = "custom-model"\n[projects."/keep"]\ntrust_level = "untrusted"\n'
+            target.write_text(original,encoding='utf-8')
+            orchestration.configure_trusted_projects(target,roots)
+            text=target.read_text(encoding='utf-8');parsed=tomllib.loads(text)
+            self.assertTrue(text.startswith(original))
+            self.assertEqual(parsed['model'],'custom-model')
+            self.assertEqual(parsed['projects']['/keep']['trust_level'],'untrusted')
+            self.assertEqual({root:parsed['projects'][root] for root in roots},expected)
+            orchestration.configure_trusted_projects(target,roots)
+            self.assertEqual(target.read_text(encoding='utf-8'),text)
+            target.write_text('invalid = [',encoding='utf-8')
+            with self.assertRaises(tomllib.TOMLDecodeError):
+                orchestration.configure_trusted_projects(target,roots)
+            self.assertEqual(target.read_text(encoding='utf-8'),'invalid = [')
+
+    def test_prepare_defers_reload_only_for_native_stopped_controller(self):
+        # GC v1.5 cmd_citystatus.go ControllerJSON and controllerStatusForCity:
+        # an unregistered cold city has running=false without pid/status;
+        # a live supervisor can positively report status=stopped.
+        city='/srv/xray-city'
+        for controller in ({'running':False},{'running':False,'mode':'supervisor'},
+                           {'running':False,'mode':'supervisor','pid':123,'status':'stopped'}):
+            status={'schema_version':'1','ok':True,'city_path':city,'controller':controller}
+            with self.subTest(controller=controller):
+                native=unittest.mock.Mock(return_value=json.dumps(status))
+                self.assertEqual(orchestration.reload_prepared_city(native,city),'deferred_stopped')
+                native.assert_called_once_with(['/usr/local/bin/gc','--city',city,'status','--json'])
+
+    def test_live_reload_failure_and_unknown_controller_state_are_not_swallowed(self):
+        city='/srv/xray-city'
+        base={'schema_version':'1','ok':True,'city_path':city,'controller':{'running':True,'pid':123}}
+        native=unittest.mock.Mock(side_effect=[json.dumps(base),RuntimeError('native reload failed')])
+        with self.assertRaisesRegex(RuntimeError,'native reload failed'):
+            orchestration.reload_prepared_city(native,city)
+        self.assertEqual(native.call_args.args[0],['/usr/local/bin/gc','--city',city,'reload'])
+        native=unittest.mock.Mock(side_effect=[json.dumps(base),'Reload applied'])
+        self.assertEqual(orchestration.reload_prepared_city(native,city),'applied')
+        for changes in ({'controller':{'running':False,'pid':123,'status':'unknown'}},
+                        {'controller':{'running':False,'pid':123,'status':'starting'}},
+                        {'controller':{'running':False,'pid':123}},
+                        {'controller':{}},{'controller':{'running':'false'}},
+                        {'city_path':'/other'},{'partial':True},{'ok':False},
+                        {'schema_version':'future'}):
+            with self.subTest(changes=changes):
+                native=unittest.mock.Mock(return_value=json.dumps({**base,**changes}))
+                with self.assertRaises(RuntimeError):orchestration.reload_prepared_city(native,city)
+                self.assertEqual(native.call_count,1)
+
     def test_host_context_is_explicit_and_cannot_alias_worker_stores(self):
         data=self.host_context()
         self.assertEqual(orchestration.validate_context(data),data)

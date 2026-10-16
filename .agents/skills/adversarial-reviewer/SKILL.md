@@ -11,8 +11,10 @@ for the normal critical review without waiting for the user to request an
 agent. If Sol leaves one named
 multi-subsystem, ownership, lifecycle, concurrency, security, Android-boundary,
 or release-evidence technical discriminator unresolved and the evidence exists,
-automatically send only that discriminator and existing evidence to
-`mu_deep_reviewer` on Astra high. Do not rerun the unchanged review or use
+automatically send only that discriminator and existing evidence to the single
+Gas City `mu-deep` adviser pool under CODEX_PACK routing. Use the native
+`mu_deep_reviewer` on Astra high only when that runtime is unavailable and no
+other Astra adviser is active. Do not rerun the unchanged review or use
 `ultra` effort. Missing authority, an artifact, or an accepted product decision
 is a blocker, not an Astra trigger.
 

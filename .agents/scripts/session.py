@@ -14,7 +14,7 @@ def configuration_args(core):
         for name,item in value.items():
             key=prefix+name
             if isinstance(item,dict):flatten(item,key+'.')
-            else:args.extend(['-c',key+'='+json.dumps(item)])
+            else:args.extend(['-c',key+'='+json.dumps(item,ensure_ascii=False)])
     flatten(cfg)
     return args
 

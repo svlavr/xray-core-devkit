@@ -1,132 +1,137 @@
 # Xray Core DevKit
 
 [Documentation](docs/README.md) · [Installation](docs/INSTALLATION.md) ·
+[File map](docs/FILES.md) ·
 [Download ZIP](https://github.com/svlavr/xray-core-devkit/archive/refs/heads/main.zip)
 
-The complete configured Codex toolkit we use for Xray-core development: skills,
-specialized agents, Go code intelligence, MCP lifecycle control, source accounting,
-review, Android artifact qualification, guarded source exports and external
-Gas City orchestration.
+The complete configured Codex toolkit we use for Xray-core development: eleven
+skills, eight specialized agent roles, Go code intelligence, MCP process control,
+source accounting, review, Android artifact qualification, guarded source exports
+and Gas City orchestration.
 
-This is an independent project that shares the tooling and engineering method.
-It contains no Xray runtime implementation, product development plans, research
-receipts, personal account state or private source history. Downloading it does
-not attach it to any existing project. Installation and updates operate only on
-the explicit target supplied by the user.
+This independent distribution shares the tools and engineering method. It
+contains no Xray runtime, product plans, private source history, credentials or
+personal account state. Downloading it does not connect any existing project.
+You choose the exact source checkout when installing it.
 
-## Complete working configuration
+## Start here
 
-- **11 skills:** startup, research, code analysis, implementation, orchestration,
-  adversarial review, threat modeling, Android validation, checkpoints, public CI
-  and handoff.
-- **8 roles:** explorer, investigator, upstream researcher, Go worker, reviewer,
-  performance reviewer, critical reviewer and a deep reviewer for one evidenced
-  unresolved technical question.
-- **Model policy:** Luna High for narrow exploration, Sol 6.1 High for ordinary
-  work, Astra High for the named deep discriminator. The primary model remains
-  the user's choice. Configured native worker capacity is 23, subject to the
-  actual session and host limits.
-- **Context policy:** 872000 nominal tokens, 95% effective context, compaction at
-  80% of effective capacity, scope `total`. Local model capabilities are checked
-  when available; settings do not grant account access or prove session adoption.
-- **MCP:** pinned gopls, GitNexus, sandboxed Repomix and Context7. Windows Go is
-  enabled; Android Go is configured but initially disabled, as in the working
-  setup. Repomix is enabled when installed. Analysis helpers include ast-grep,
-  package-import maps and deadcode.
-- **External orchestration:** Gas City, Beads, Dolt, exact input batches,
-  source-pinned worker worktrees, controlled model routing and reviewed hooks.
-- **Process control:** owned descendants, isolated scratch, bounded I/O and
-  deadlines, idle backend eviction, initialization replay and cancellation.
+You need a Windows host with Python 3.11+, Git, Go, Node with npm, and a Codex CLI
+that supports the supplied settings and roles. The recorded reference toolchain
+is Go 1.27.0 and Node 24.18.0; dependency versions and platform limits are in
+[installation](docs/INSTALLATION.md). Bring your own Codex authentication and
+model access. The separate Linux/WSL external-worker runtime is included and
+configured through [orchestration](docs/ORCHESTRATION.md).
 
-The language setting keeps internal tasks, reports and documentation in English,
-with Russian direct replies from the primary coordinator. Keep it or deliberately
-adapt it for your own work. Agent role instructions do not create a separate OS
-sandbox; the parent session supplies actual permissions.
+There are two directories: the **DevKit root** contains `devkit.py`; the **source
+root** is your chosen Git checkout of `github.com/xtls/xray-core`, or a fork that
+retains that Go module path. Examples use `D:/Work/Xray-core` for the source and
+`D:/Tools/xray-analysis` for dependencies. Substitute your own canonical paths.
 
-## Install in your own Xray checkout
-
-See [installation](docs/INSTALLATION.md) for requirements and complete commands.
-The toolkit targets the `github.com/xtls/xray-core` Go module, including forks that
-retain that module path. It shares the current Windows/Linux tool arrangement;
-macOS process supervision and other clients are not qualified by this project.
-
-Clone the toolkit, or extract the ZIP and open its directory. With Git:
+Clone the toolkit, or extract the ZIP and open its `xray-core-devkit` directory:
 
 ```powershell
 git clone https://github.com/svlavr/xray-core-devkit.git
+```
+
+```powershell
 cd xray-core-devkit
 ```
 
-From the toolkit directory:
+From the DevKit root, verify the download, preview the copy and install:
 
 ```powershell
 python devkit.py verify
+```
+
+```powershell
 python devkit.py install --target D:/Work/Xray-core --dry-run
+```
+
+```powershell
 python devkit.py install --target D:/Work/Xray-core
 ```
 
-Then from the selected Xray checkout:
+Then change to the selected source root:
+
+```powershell
+cd D:/Work/Xray-core
+```
+
+Install the locked analysis dependencies, generate local settings, inspect
+startup and open a fresh Codex session:
 
 ```powershell
 python .agents/scripts/dependencies.py install --tools D:/Tools/xray-analysis
+```
+
+```powershell
 python .agents/scripts/workspace.py setup --analysis-tools D:/Tools/xray-analysis
+```
+
+```powershell
 python .agents/scripts/check_core.py
+```
+
+```powershell
 python .agents/scripts/session.py --
 ```
 
-If the complete dependency set is already installed in that layout, inspect it
-with `dependencies.py status --tools ...` and reuse it. Tools are installed into
-the selected directory; authentication is supplied independently by the user.
-Context7 needs network access; the external runtime needs the user's own Linux
-environment, city, local queue and Codex login. No credentials are supplied.
+If you already have the matching dependency layout, use `dependencies.py status
+--tools D:/Tools/xray-analysis` before reusing it. Read the
+[complete installation guide](docs/INSTALLATION.md) for prerequisites, conflicts,
+updates and troubleshooting. Startup reports facts; the human still supplies
+source task, behavior contract, baseline, write set and Git policy.
 
-## Updates and file-linked instructions
+## What is configured
 
-Skills intentionally use separately maintained reference files, scripts and
-configuration. Those files are included in the distribution. Download or pull a
-new reviewed copy of this repository, then run:
+- **Skills and roles:** startup, research, Go analysis, implementation,
+  orchestration, review, threat modeling, Android qualification, checkpoint,
+  public CI and handoff. [All eleven skills and eight roles](docs/README.md#skills-and-roles)
+  remain available.
+- **Model routing:** Luna High for narrow exploration, Sol 6.1 High for ordinary
+  roles, and one Astra High adviser for a named technical question unresolved by
+  Sol. The primary model stays the user's choice. Native capacity is 23, subject
+  to the actual session and host limits.
+- **Context:** 872000 nominal tokens, 95% effective capacity and compaction at
+  80% of effective capacity, scope `total`. Local catalog checks do not grant
+  account access or prove that an existing session adopted these settings.
+- **MCP and analysis:** pinned gopls v0.23.0, GitNexus, Context7, Repomix when
+  installed, ast-grep, package maps and deadcode. The Windows Go profile is
+  enabled; Android Go is configured and initially disabled.
+- **Process control:** owned descendant trees, isolated scratch, bounded I/O,
+  deadlines, cancellation, idle backend eviction and initialization replay.
+- **External orchestration:** Gas City, Beads, Dolt, verified input batches,
+  source-pinned worker worktrees, explicit model routing and reviewed hooks.
 
-```powershell
-python devkit.py update --target D:/Work/Xray-core --dry-run
-python devkit.py update --target D:/Work/Xray-core
-```
+Internal tasks and documentation use English; direct primary-coordinator
+replies use Russian. Adapt that policy deliberately if needed. Agent
+`sandbox_mode` fields express role intent; actual access comes from the parent
+session's permissions. See [configuration](docs/CONFIGURATION.md) for exact
+settings and their editable sources.
 
-Updates copy files; installed projects do not depend on the development checkout
-remaining available. The installer records hashes and refuses to overwrite local
-edits or conflicting files. Human instructions outside its managed blocks remain
-intact. Host settings and account state are never part of the update payload.
-After accepting an update, rerun workspace setup and start a fresh session when
-configuration, roles or MCP launchers changed.
+## Updates, checks and scope
 
-## Documentation
+Updates are deliberate file copies from a newly downloaded or pulled DevKit.
+The installer records hashes, preserves local edits and leaves human text
+outside its managed instruction blocks intact. Installed tools do not depend on
+the DevKit download remaining available. Copying an update, regenerating local
+settings and restarting a session are separate steps; follow the
+[update procedure](docs/INSTALLATION.md#update-an-installed-checkout).
 
-- [Documentation home and component map](docs/README.md)
-- [Project scope and authority](docs/PROJECT_SCOPE.md)
-- [Workflow, evidence and validation](docs/WORKFLOW.md)
-- [Checkout configuration](docs/CONFIGURATION.md)
-- [Go and MCP analysis](docs/ANALYSIS.md)
-- [Accounting and source export](docs/ACCOUNTING_AND_EXPORT.md)
-- [External orchestration](docs/ORCHESTRATION.md)
-- [Maintenance and distribution checks](docs/MAINTENANCE.md)
-- [Third-party components](THIRD_PARTY_NOTICES.md)
+The distribution includes tooling regression tests for configuration, analysis,
+MCP lifetime, orchestration, exports and installation. See
+[maintenance](docs/MAINTENANCE.md#verify-a-change) for runnable contexts and skip
+reporting. Xray runtime tests and private fixtures are outside this payload.
+Source, host, device, network, performance and release evidence each require
+their own proof; installing the toolkit transfers no historical acceptance.
 
-The skills apply the user's task and source contracts; they do not invent a
-product architecture or authorize publication. Source, host, device, network,
-performance and release evidence remain separate.
-
-## Included tests
-
-The toolkit ships its own regression tests in `.agents/scripts/test_*.py` and
-`tests/`: configuration, analysis evidence, MCP transport and lifecycle,
-orchestration, export guards, installation, updates and distribution auditing.
-See [maintenance checks](docs/MAINTENANCE.md#verify-a-change) for the commands and
-prerequisites. Xray runtime tests belong to the source revision they exercise;
-this tooling distribution does not include a downstream project's runtime suite
-or private test inputs.
+Use the [documentation home](docs/README.md) to find the workflow, analysis,
+accounting, export and orchestration guides. The toolkit does not authorize
+source changes or publication merely by being installed.
 
 ## License
 
-Toolkit source is distributed under the included [MPL-2.0](LICENSE).
-Third-party tools retain their own licenses. In particular, the recorded
-GitNexus release has noncommercial terms; see the component notices. The
-distribution does not relicense those dependencies.
+Toolkit source uses [MPL-2.0](LICENSE). Dependencies retain their own licenses;
+the recorded GitNexus release has noncommercial terms. Read
+[third-party notices](THIRD_PARTY_NOTICES.md) before using those components.

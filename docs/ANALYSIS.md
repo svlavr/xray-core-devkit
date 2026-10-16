@@ -1,11 +1,22 @@
 # Go and source analysis
 
-The installed toolkit operates on the checkout containing `.agents`. Run workspace
-setup first with an explicit `analysis_tools` directory. Local context records the
-checkout, executable paths and tools directory; it is host data and stays ignored.
+Run the commands below from the explicitly selected Xray source root, after
+[installation](INSTALLATION.md) and
+`python .agents/scripts/workspace.py setup --analysis-tools D:/Tools/xray-analysis`.
+The DevKit repository has no Go runtime to inspect. Replace the illustrative tools
+path and stock source paths with the actual task inputs before invoking them.
+
+The installed toolkit operates on the checkout containing its `.agents` directory.
+Local context records the checkout, executable paths and tools directory; it is
+host data and stays ignored.
 The launchers never discover or borrow a different project's Python helper files.
-`--repo` on the checkout launchers asserts the installed checkout identity. Install
-the toolkit in another checkout before selecting that checkout.
+`--repo` on `xray_analysis.py` and `xray_mcp.py` asserts the installed checkout
+identity; it does not redirect those launchers to another source root. Install
+the toolkit explicitly in another checkout before selecting it. Standalone
+`package_map.py` and `inspect_go.py` accept an explicit module root instead.
+The configured wrapper loads host context before parsing arguments, so even its
+`--help` requires setup. Read its parser or use the standalone helper's `--help`
+when investigating prerequisites before setup.
 
 ## Select only the evidence needed
 
@@ -18,8 +29,11 @@ require every tool or a platform matrix.
 python .agents/scripts/xray_analysis.py status --repo . --profile windows
 python .agents/scripts/xray_analysis.py packages --repo . --profile linux --package github.com/xtls/xray-core/transport
 python .agents/scripts/xray_analysis.py symbol --repo . --profile android --file transport/link.go --symbol Link
-python .agents/scripts/xray_analysis.py symbol --repo . --profile linux --tags selected --file transport/link.go --symbol Link --out .local/analysis/inspection-001
+python .agents/scripts/xray_analysis.py symbol --repo . --profile linux --file transport/link.go --symbol Link --out .local/analysis/inspection-001
 ```
+
+These are alternatives, not a required sequence or build matrix. Add
+`--tags actual_tag` only when the accepted task requires that real build tag.
 
 Profiles select windows/amd64, linux/amd64 or android/arm64. Windows and Linux are
 the supported hosts; Android here is an analysis target. Every selected profile
@@ -29,7 +43,7 @@ change that profile. Local go.work files are included in fingerprints and preven
 a current graph claim because graph export covers a single module. Symbol and
 package analysis explicitly inspect the selected module with GOWORK=off.
 
-`xray_mcp.py gopls --repo . --profile windows` launches the same profile through a
+`python .agents/scripts/xray_mcp.py gopls --repo . --profile windows` launches the same profile through a
 version-checked adapter. Confirm the actual `go_workspace` result before using
 semantic evidence; launcher identity alone does not prove the backend loaded the
 requested module. Symbol inspections check that returned workspace text identifies
@@ -71,20 +85,38 @@ gopls version requires reviewing that correction before changing the pin.
 
 An inspection stores raw MCP initialization/catalogue/call responses, stderr,
 probe log, source/build provenance, exact parsed locations, file context and the
-ast-grep outline. Partial or unfamiliar reference prose fails explicitly and
+ast-grep outline. Read `inspection.json` first: it records consistency, selected
+build, workspace confirmation and reference locations. `file_context` points to
+the raw `go_file_context` response; it is not a separately inferred API contract.
+Follow `raw_dir`, `outline_file` and `probe.log` for the evidence behind that
+summary. Partial or unfamiliar reference prose fails explicitly and
 retains raw evidence. Source changes during extraction prevent a consistent
-result. Symbol output directories must be fresh; default directories are unique.
+result. Use an empty output directory; default directories are unique. A
+`SOURCE_CHANGED` result needs a new consistent extraction before relying on it.
 
-Standalone examples (the tools path is illustrative and supplied by the caller):
+Standalone alternatives from the installed source root (the paths are
+illustrative; create the ignored output parent first):
 
 ```powershell
-python .agents/scripts/package_map.py --repo . --out .local/analysis/packages.json --platforms linux/amd64 --tags selected
-python .agents/scripts/package_map.py --repo . --out .local/analysis/packages.json --platforms linux/amd64 --tags selected --impact github.com/xtls/xray-core/transport
-python .agents/scripts/inspect_go.py --repo . --tools <analysis-tools> --platform linux/amd64 --file transport/link.go --symbol Link
-python .agents/scripts/mcp_probe.py --exe python --cwd . --out .local/analysis/probe --calls .local/analysis/calls.json --args .agents/scripts/go_mcp.py --binary <analysis-tools>/bin/gopls.exe --repo .
+New-Item -ItemType Directory -Force .local/analysis | Out-Null
+python .agents/scripts/package_map.py --repo . --out .local/analysis/packages.json --platforms linux/amd64
+python .agents/scripts/package_map.py --repo . --out .local/analysis/packages.json --platforms linux/amd64 --impact github.com/xtls/xray-core/transport
+python .agents/scripts/inspect_go.py --repo . --tools D:/Tools/xray-analysis --platform linux/amd64 --file transport/link.go --symbol Link
 ```
 
-Place `mcp_probe.py --args` last; all remaining values are backend arguments.
+The second package command consumes the first command's saved map with the same
+root/profile/tags; a mismatched source SHA or fingerprint requires rebuilding.
+`--impact` does not rebuild that map. `inspect_go.py` performs the MCP probe and
+creates its call file automatically.
+
+For a protocol-level investigation, supply your own reviewed `calls.json`, a JSON
+array of objects with `name` and `arguments`, then use a fresh probe output path:
+
+```powershell
+python .agents/scripts/mcp_probe.py --exe python --cwd . --out .local/analysis/probe-001 --calls .local/analysis/calls.json --args .agents/scripts/go_mcp.py --binary D:/Tools/xray-analysis/bin/gopls.exe --repo .
+```
+
+Place `--args` last; all remaining values are backend arguments.
 The probe reports backend error results with a nonzero exit status and saves the
 raw result. It does not negotiate reverse client capabilities.
 
@@ -117,13 +149,17 @@ heavy backends indefinitely.
 
 ## Managed resources and limits
 
-Run local test/build commands through the bundled guard:
+Run local test/build commands through the bundled guard. From the DevKit root,
+the Python example exercises toolkit helpers. The Go example requires the
+installed source root and that actual package; select the check from the task.
 
 ```powershell
 python .agents/scripts/resource_guard.py --timeout 120 -- python -m unittest discover -s .agents/scripts -p test_analysis_helpers.py
 python .agents/scripts/resource_guard.py --timeout 120 -- go test ./common/buf
-python .agents/scripts/resource_guard.py --clean
 ```
+
+`python .agents/scripts/resource_guard.py --clean` is a separate recovery action
+for inactive managed scratch, not a required step after every successful command.
 
 Each managed command owns its descendant tree and isolated marked scratch under
 `.local/host/transient`. Normal exit, error, timeout and owner death reap that tree.

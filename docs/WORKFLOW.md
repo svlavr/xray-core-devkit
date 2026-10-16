@@ -1,14 +1,20 @@
 # Xray workflow and evidence policy
 
-Read `PROJECT_SCOPE.md` first. Main owns the accepted task, scope, integration,
-validation and any authorized publication. Startup reports facts and does not
+Read [project scope](PROJECT_SCOPE.md) first. Main owns the accepted task, scope,
+integration, validation and any authorized publication. Startup reports facts and does not
 start an implementation, fetch, build matrix, graph refresh or source export.
 
 ## Start and map ownership
 
+For DevKit repository maintenance, use the checks in
+[maintenance](MAINTENANCE.md) from the root containing `devkit.py`. The source
+startup below requires a separately selected installed Xray checkout. The two
+roots have independent files, revisions and acceptance.
+
 Read the source checkout's `AGENTS.md` and any applicable `AGENTS.override.md`,
 `.agents/CODEX_PACK.md`, its accepted task/contract and ignored host context. Run
-`python .agents/scripts/check_core.py` from the configured root. Report root,
+`python .agents/scripts/check_core.py` from that source root after
+[workspace setup](CONFIGURATION.md). Report root,
 branch/HEAD, adopted official baseline, remotes, publication restrictions and
 dirty paths. Toolkit-only setup does not establish source/runtime readiness.
 
@@ -27,7 +33,9 @@ actual external owner unless the accepted contract explicitly selects it here.
 
 ## Parallel ownership and review
 
-Use `.agents/CODEX_PACK.md` and `xray-orchestration` for early independent lanes,
+Use the [agent pack](../.agents/CODEX_PACK.md),
+[orchestration skill](../.agents/skills/xray-orchestration/SKILL.md) and
+[external runtime guide](ORCHESTRATION.md) for early independent lanes,
 ready-frontier receipts, explicit role/model routing and bounded resources.
 Packets include objective, exact root/refs, read/write sets, exclusions, known
 facts, acceptance, executor and stop conditions. Preserve all other edits.
@@ -56,26 +64,24 @@ is counted once. Explain growth and baseline/catalog changes. For process-only
 work, report runtime unchanged only after observing it. Line counts grant no
 removal authority, target ranges or quotas.
 
-At an authorized checkpoint, stage exact owned paths, generate the snapshot
-from the actual index and add it to that same owned set:
+At an authorized checkpoint, stage exact owned paths and the reviewed catalog,
+generate the snapshot from the actual index, then stage and verify that snapshot
+in the same index before commit. Verify the resulting HEAD afterward. The
+[accounting guide](ACCOUNTING_AND_EXPORT.md) gives the ordered commands,
+initialization rules and optional shared-runtime evidence map. Recheck if owned
+bytes change. The actual commit SHA comes from Git; snapshot history needs no
+second commit for its own SHA.
 
-```powershell
-python .agents/scripts/source_size.py snapshot --source INDEX --upstream <adopted-official-SHA> --output .agents/metrics/source-size.json
-python .agents/scripts/source_size.py verify --source INDEX
-```
-
-Inspect and verify the exact index including its catalog/snapshot before commit.
-After committing, run `python .agents/scripts/source_size.py verify --source HEAD`. The actual commit
-SHA comes from Git; snapshot history lives in Git and requires no second commit
-for its own SHA. Recheck if owned bytes change. Toolkit-only projects must use an
-appropriate explicit catalog/baseline; do not label missing runtime metrics as
-an Xray source verification.
+Toolkit maintenance uses its explicit task's validation/accounting policy. A
+toolkit-only task must not invent an Xray baseline or runtime module catalog to
+make a source accounting gate appear satisfied.
 
 ## Validation and fixture races
 
 Use one executor per validation command; reuse matching exact-source receipts.
 Rerun after relevant changes, new failures or unresolved concerns. Run host
-commands through `resource_guard.py`, keep durable evidence outside scratch and
+commands through the [resource guard](ANALYSIS.md#managed-resources-and-limits),
+keep durable evidence outside scratch and
 serialize cache-heavy work. Select focused tests from affected behavior; race
 shared state, and measure before/after for quantitative performance claims.
 Do not weaken original tests or apply exceptions from another project.
@@ -111,13 +117,14 @@ push to the explicit authorized remote/ref only. Verify the observed remote SHA
 with `.agents/scripts/remote_evidence.py`; unavailable or mismatching proof is
 not PUBLISHED. Report `PUBLISHED`, `LOCAL_ONLY` or `NO_CHECKPOINT` with reason.
 
-A filtered source publication is a separately authorized operation through
-`.agents/scripts/public_export.py` with the user-supplied
-`.agents/public-export.json`. Prove the committed allowlist/blob correspondence,
-public-only or official ancestry and exact public SHA before publication. Do
-not mirror a private working branch, push its history or include credentials,
-host state, private instructions/documents or raw logs. Public CI runs on the
-filtered public tree without private access. Preserve all other refs/defaults.
+A filtered source publication is a separately authorized operation using the
+user-supplied `.agents/public-export.json`. Follow the
+[export guide](ACCOUNTING_AND_EXPORT.md#configure-a-filtered-public-export) for
+configuration, network effects and candidate verification, then
+[xray-public-ci](../.agents/skills/xray-public-ci/SKILL.md) for checks on that
+exact public tree. Preserve all other refs/defaults. DevKit distribution packaging
+uses `devkit.py package` under [maintenance](MAINTENANCE.md), independently of
+the runtime source exporter.
 
 No implicit PR, tag, release, binary upload, visibility/default change, archive,
 retirement or deletion follows from a checkpoint or CI run. Toolkit maintenance

@@ -8,14 +8,16 @@ conventions, not a connection to another repository.
 
 ## Pinned runtime and prerequisites
 
-`.agents/runtime-lock.json` pins Linux amd64 Gas City 1.5.0, Beads 1.3.1,
+[`.agents/runtime-lock.json`](../.agents/runtime-lock.json) pins Linux amd64 Gas City 1.5.0, Beads 1.3.1,
 Dolt 2.4.2 and the complete Codex rust-v0.162.0-alpha.2 package by URL and SHA256.
-The roles import in `.agents/orchestration/city.toml` is also commit-pinned.
+The roles import in [`.agents/orchestration/city.toml`](../.agents/orchestration/city.toml) is also commit-pinned.
 Do not use an unpinned curl-to-shell installer or replace an existing runtime.
 
 The user must explicitly prepare a dedicated WSL2 Linux amd64 distribution,
-unprivileged Linux user, outbound network access, sufficient RAM/disk and
-Python 3.12+. On an Ubuntu/Debian distribution, install the operating-system
+unprivileged Linux user with its home at `/home/<user>`, outbound network access,
+sufficient RAM/disk and Python 3.12+. The host adapter uses that home convention
+for bootstrap files, the model catalog and Codex configuration. On an
+Ubuntu/Debian distribution, install the operating-system
 prerequisites inside that selected distribution:
 
 ```sh
@@ -41,8 +43,11 @@ configuration and live mounts before dispatch. A VM-wide WSLInterop registration
 can coexist with disabled per-distribution interop; this check does not claim a
 separate kernel or a complete security sandbox.
 
-Transfer the devkit scripts and runtime lock into a new Linux staging directory
+Transfer a complete clean devkit copy into a new Linux staging directory
 through `\\wsl.localhost\<distribution>\home\<user>\<staging>` from Windows.
+Include hidden directories: the analysis installer needs `.agents/dependencies/`
+and its npm lockfiles as well as `.agents/scripts/`, `.agents/orchestration/`
+and the runtime lock. Exclude `.local/`, credentials and any unrelated source.
 Do not enable drive mounts merely to access the source. With a staging copy at
 `$HOME/devkit-bootstrap`, install exact locked runtime bytes:
 
@@ -65,7 +70,17 @@ session. A failed install may leave a partial newly created prefix after a local
 filesystem error; inspect it and select a fresh destination before retrying.
 
 Install the Go toolchain required by the target checkout (the current template
-uses Go 1.27.0) and Node 24.18.0. The Linux worker analysis tools use the same
+uses Go 1.27.0) and Node 24.18.0 **with npm**. Expose `go`, `gofmt`, `node` and
+`npm` on the Linux user's noninteractive PATH, for example through the dedicated
+distribution's `/usr/local/bin`. Windows invokes `wsl --exec` directly, so a PATH
+export only in an interactive shell's startup file is insufficient. Check the
+same launch environment from Windows, substituting the selected account:
+
+```powershell
+wsl -d Xray-Workers -u worker --exec sh -c 'command -v python3 git tmux go gofmt node npm; go version; node --version; npm --version'
+```
+
+Return to the staging copy in Linux. The worker analysis tools use the same
 portable dependency installer as the host:
 
 ```sh
@@ -73,7 +88,7 @@ python3 .agents/scripts/dependencies.py install --tools "$HOME/xray-tools"
 ```
 
 The tool pins include gopls v0.23.0. Run `python3 .agents/scripts/dependencies.py status --tools "$HOME/xray-tools"`
-and the dependency verification documented in `docs/INSTALLATION.md`. A worker needs `$HOME/xray-tools/bin/gopls` and Go on its Linux
+and the dependency verification documented in [INSTALLATION.md](INSTALLATION.md). A worker needs `$HOME/xray-tools/bin/gopls` and Go on its Linux
 PATH; Windows gopls binaries cannot substitute for Linux worker tools. Configure
 Git identity inside this dedicated user account before allowing worker commits.
 Complete `/usr/local/bin/codex login` interactively using the user's own account.
@@ -85,7 +100,7 @@ capabilities block setup and need an explicit policy review.
 
 ## Select a new host connection
 
-Copy `examples/orchestration.json` to an ignored local editing location, choose
+Copy [examples/orchestration.json](../examples/orchestration.json) to an ignored local editing location, choose
 its distribution, user, city, local bare queue, rig, worker worktree base and
 analysis-tools paths, and optionally set a credential-free HTTP(S) proxy endpoint.
 All stores except a rig beneath its city must be disjoint. Keep the rig name
@@ -104,15 +119,18 @@ This adapter is a Windows host entrypoint; its external runtime runs in WSL.
 
 ## Initialize the independent queue, city and rig
 
-Complete project setup first so `workspace.py` accepts the intended repository,
+Complete [project scope](PROJECT_SCOPE.md) and [host setup](INSTALLATION.md)
+first so `workspace.py` accepts the intended repository,
 current branch and baseline. Commit the source/tool state selected for workers;
 read-only batches can separately capture bounded dirty source bytes. Do not reuse
-another project's queue or city. Create the following initial bundle from the
+another project's queue or city. Implementation workers require the explicitly
+selected Xray source repository with `module github.com/xtls/xray-core` and the
+integrated toolkit; the devkit repository alone is not such a source checkout.
+Create the following initial bundle from the
 Windows integration checkout, using the configured **local expected branch**:
 
 ```powershell
 $sourceBranch = 'codex/integration' # replace with workspace policy expected_branch
-$sourceHead = git rev-parse HEAD
 git -c gc.auto=0 -c maintenance.auto=false bundle create .local/workspace/seed.bundle $sourceBranch
 ```
 
@@ -131,8 +149,13 @@ source_branch=codex/integration  # same expected_branch as the exported bundle
   "$HOME/devkit-bootstrap/seed.bundle" "$source_branch:refs/heads/$source_branch"
 /usr/bin/git --git-dir=/srv/xray-queues/source.git symbolic-ref HEAD "refs/heads/$source_branch"
 /usr/bin/git clone /srv/xray-queues/source.git /srv/xray-city/mu-core
-/usr/local/bin/gc init /srv/xray-city --template minimal --providers codex --default-provider codex
+/usr/local/bin/gc init /srv/xray-city --template minimal --providers codex --default-provider codex --no-start
 ```
+
+`--no-start` is required here: GC 1.5 otherwise registers and starts the city
+during initialization, before the maintained model policy and worker inputs are
+installed. Initialization still writes the city and ledger and may fetch its
+native pack imports; it is not a read-only probe.
 
 The rig's only remote
 must be the absolute local queue path, for both fetch and push. No GitHub remote,
@@ -147,6 +170,11 @@ explicit model policy, and trusts only the four exact reviewed native hooks.
 It creates missing hooks from the reviewed GC 1.5 template; a changed or extra
 existing hook blocks setup. Native fingerprints are derived from the reviewed
 commands with the selected city path and checked against Codex's native inventory.
+This action writes the selected Linux user's Codex configuration: it trusts the
+exact city/rig roots and the verified hook identities through Codex's native
+configuration API. It initializes a missing `config.toml` and preserves unrelated
+existing settings. Helper installation uses a bounded root invocation in that
+selected distribution. It does not start an agent or submit a model request.
 
 ```powershell
 python .agents/scripts/orchestration.py configure
@@ -175,10 +203,14 @@ python .agents/scripts/orchestration.py status
 exports the exact integration HEAD through a Git bundle into the local queue,
 checks the transferred commit, records a persistent wave/bead ID, and provisions
 all 23 source-pinned native GC worktrees before admitting the worker pool config.
+It reloads a running controller; for a positively observed stopped controller it
+reports `reload: deferred_stopped`, and the later `start` reads the prepared
+configuration. Unknown/starting controller state and a live reload failure remain
+errors; preparation never starts a controller to hide them.
 Its manifest includes the city, source SHA, generation, queue, worktree base and
 analysis-tools root. Each pre-start revalidates the slot and local queue, generates
 worker-only ignored context, and verifies/trusts the exact city-bound hooks.
-Workers read `docs/PROJECT_SCOPE.md` and their dispatched write set. They may
+Workers read [PROJECT_SCOPE.md](PROJECT_SCOPE.md) and their dispatched write set. They may
 create local handoff commits and exchange them only with this local queue.
 Integration, review and publication belong to the main coordinator.
 
@@ -200,7 +232,8 @@ packets must identify Linux-readable evidence. Do not pass Windows paths:
 python .agents/scripts/orchestration.py dispatch .local/task.json
 ```
 
-For independent read-only lanes, use a verified batch. A minimal packet is:
+For independent read-only lanes, use a verified batch. A minimal packet for the
+selected source repository containing `go.mod` is:
 
 ```json
 {
@@ -224,8 +257,11 @@ python .agents/scripts/orchestration.py stop
 ```
 
 Batches select explicit aliases and regular file paths from WORKTREE, HEAD or a
-full commit SHA. Inputs are limited to 512 files, 8 MiB each and 64 MiB total;
-credentials, Git storage and generated host context are excluded. Bytes and a
+full commit SHA. Inputs are limited to 512 files, 8 MiB each and 64 MiB total.
+Path guards reject Git storage, generated host context and reserved credential
+filenames such as `.env`, `auth.json` and `credentials.json`. They do not scan
+file contents or recognize every secret filename; review every selected input,
+including files such as `.env.production` or key files, before dispatch. Bytes and a
 manifest are verified on Windows and in the Linux reader namespace. Worktree
 read races, aliases, links, corrupt copies and namespace changes block dispatch.
 All 2..23 independent tasks are created before routing; all ready tasks are
@@ -268,8 +304,21 @@ recovering interrupted work. Inspect `preparing-wave.json` and the native issue
 before resuming a preparation. Preserve live or unrelated queues and worktrees;
 this kit provides no automatic destructive cleanup or publication step.
 
+The release lock can be checked against upstream release metadata and the hook
+protocol can be checked against the pinned source without starting WSL. Those
+checks establish artifact identity and API compatibility only. A model catalog
+is not an account entitlement test; each selected model needs an explicitly
+authorized successful request before its execution can be called qualified.
+Do not create a city, log in, or run a model merely to replace an UNKNOWN gate
+with a passing label.
+
 Pinned implementation references: [GC init](https://github.com/gastownhall/gascity/blob/v1.5.0/cmd/gc/cmd_init.go),
 [GC rig commands](https://github.com/gastownhall/gascity/blob/v1.5.0/cmd/gc/cmd_rig.go),
+[GC worktrees](https://github.com/gastownhall/gascity/blob/v1.5.0/cmd/gc/cmd_worktree.go),
+[Beads task creation](https://github.com/gastownhall/beads/blob/v1.3.1/cmd/bd/create.go),
 [GC hook rendering](https://github.com/gastownhall/gascity/blob/v1.5.0/internal/hooks/hooks.go),
 [Codex hook discovery](https://github.com/openai/codex/blob/rust-v0.162.0-alpha.2/codex-rs/hooks/src/engine/discovery.rs)
 and [native identity hashing](https://github.com/openai/codex/blob/rust-v0.162.0-alpha.2/codex-rs/config/src/fingerprint.rs).
+The versioned [Codex hook schema](https://github.com/openai/codex/blob/rust-v0.162.0-alpha.2/codex-rs/app-server-protocol/schema/typescript/v2/HookMetadata.ts)
+and [configuration edits](https://github.com/openai/codex/blob/rust-v0.162.0-alpha.2/codex-rs/app-server-protocol/schema/typescript/v2/ConfigBatchWriteParams.ts)
+own the native trust API. See also the official [app-server handshake](https://learn.chatgpt.com/docs/app-server#initialization).

@@ -58,11 +58,11 @@ def setup(repo, base, queue_origin, tools):
         'Run validation through the deployed resource_guard.py with --cwd pointing to this checkout '
         'and --transient pointing to its .local/host/transient, followed by -- and the command. '
         'Keep logs and output artifacts outside that disposable scratch; preserve shared Go caches.')
-    config='developer_instructions = '+json.dumps(guidance)+'\n\n[agents]\nenabled = false\n\n[mcp_servers.xray_gopls_worker]\nenabled = true\n'
-    config+='command = '+json.dumps(sys.executable)+'\nargs = '+json.dumps(args)+'\n'
+    config='developer_instructions = '+json.dumps(guidance,ensure_ascii=False)+'\n\n[agents]\nenabled = false\n\n[mcp_servers.xray_gopls_worker]\nenabled = true\n'
+    config+='command = '+json.dumps(sys.executable,ensure_ascii=False)+'\nargs = '+json.dumps(args,ensure_ascii=False)+'\n'
     config+='startup_timeout_sec = 60\ntool_timeout_sec = 240\n'
     config+='enabled_tools = ["go_workspace", "go_search", "go_file_context", "go_package_api", "go_symbol_references", "go_diagnostics"]\n'
-    config+='[mcp_servers.xray_gopls_worker.env]\nGOOS = '+json.dumps(profile)+'\nGOARCH = "amd64"\nCGO_ENABLED = "0"\nGOFLAGS = "-mod=readonly"\nGOMAXPROCS = "2"\n'
+    config+='[mcp_servers.xray_gopls_worker.env]\nGOOS = '+json.dumps(profile,ensure_ascii=False)+'\nGOARCH = "amd64"\nCGO_ENABLED = "0"\nGOFLAGS = "-mod=readonly"\nGOMAXPROCS = "2"\n'
     (repo/'.codex').mkdir(exist_ok=True)
     (repo/'.codex/config.toml').write_text(config,encoding='utf-8',newline='\n')
     return {'status':'WORKER_CONFIGURED','root':str(repo),'base':base_sha,'profile':profile}

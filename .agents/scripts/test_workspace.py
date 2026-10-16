@@ -26,7 +26,7 @@ class WorkspaceTests(unittest.TestCase):
             ('merge-base', '--is-ancestor', self.baseline, 'HEAD'): '',
             ('remote',): '',
         }
-        for relative in workspace.HOST_FILES:
+        for relative in (*workspace.HOST_FILES, workspace.TEMP_PROBE):
             self.answers[('ls-files', '--', relative)] = ''
             self.answers[('check-ignore', '--', relative)] = relative
         (self.root / 'go.mod').write_text('module github.com/xtls/xray-core\n', encoding='utf-8')
@@ -159,6 +159,57 @@ class WorkspaceTests(unittest.TestCase):
             self.setup()
         self.assertEqual(config.read_text(), content)
 
+    def test_interrupted_configuration_pair_can_retry_without_false_manual_edit(self):
+        self.setup()
+        config = self.root / '.codex/config.toml'
+        original = config.read_bytes()
+        current_configuration = workspace.configuration
+        def changed(*args, **kwargs):
+            return '# reviewed generation change\n' + current_configuration(*args, **kwargs)
+        write = workspace.atomic_write
+        def interrupted(path, data):
+            if path == config:
+                raise OSError('synthetic configuration replacement failure')
+            return write(path, data)
+        with patch.object(workspace, 'configuration', side_effect=changed):
+            with patch.object(workspace, 'atomic_write', side_effect=interrupted):
+                with self.assertRaisesRegex(OSError, 'replacement failure'):
+                    self.setup()
+            self.assertEqual(config.read_bytes(), original)
+            self.assertIn('previous_generated_config_sha256', workspace.policy())
+            self.setup()
+            self.assertTrue(config.read_text().startswith('# reviewed generation change'))
+            self.assertNotIn('previous_generated_config_sha256', workspace.policy())
+
+    def test_manual_change_after_interruption_is_still_preserved(self):
+        self.setup()
+        config = self.root / '.codex/config.toml'
+        write = workspace.atomic_write
+        def interrupted(path, data):
+            if path == config:
+                raise OSError('synthetic configuration failure')
+            return write(path, data)
+        with patch.object(workspace, 'atomic_write', side_effect=interrupted):
+            with self.assertRaises(OSError):
+                self.setup()
+        manual = config.read_text() + '\n# deliberate manual edit after interruption\n'
+        config.write_text(manual, encoding='utf-8', newline='\n')
+        with self.assertRaisesRegex(RuntimeError, 'was edited'):
+            self.setup()
+        self.assertEqual(config.read_text(), manual)
+
+    def test_configuration_temporary_is_inside_ignored_host_area(self):
+        factory = workspace.tempfile.NamedTemporaryFile
+        with patch.object(workspace.tempfile, 'NamedTemporaryFile', wraps=factory) as temporary:
+            self.setup()
+        self.assertTrue(temporary.called)
+        for call in temporary.call_args_list:
+            self.assertEqual(Path(call.kwargs['dir']), self.root / '.local/workspace')
+        self.assertFalse(list((self.root / '.codex').glob('.setup-*.tmp')))
+        self.answers[('check-ignore', '--', workspace.TEMP_PROBE)] = RuntimeError('not ignored')
+        with self.assertRaisesRegex(RuntimeError, 'already be ignored'):
+            self.setup()
+
     def test_optional_capability_check_never_forces_online_auth(self):
         absent = self.root / 'absent-catalog.json'
         self.assertEqual(workspace.capability_status(absent)['status'], 'UNKNOWN')
@@ -179,6 +230,44 @@ class WorkspaceTests(unittest.TestCase):
 
 
 class ConfigurationTests(unittest.TestCase):
+    def test_unrelated_valid_source_extensions_are_preserved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = workspace.ROOT
+            shutil.copytree(source / '.codex/agents', root / '.codex/agents')
+            shutil.copytree(source / '.agents/skills', root / '.agents/skills')
+            shutil.copyfile(source / '.agents/CODEX_PACK.md', root / '.agents/CODEX_PACK.md')
+            skill = root / '.agents/skills/source-local-helper/SKILL.md'
+            skill.parent.mkdir(exist_ok=True)
+            skill.write_text('---\nname: source-local-helper\ndescription: Source-owned helper\n---\nRead source.\n')
+            role = root / '.codex/agents/source_helper.toml'
+            role.write_text('name="source_helper"\ndescription="Source helper"\ndeveloper_instructions="Read source"\n')
+            with patch.object(workspace, 'ROOT', root):
+                result = workspace.validate()
+                self.assertEqual((result['skills'], result['roles']), (11, 8))
+                self.assertEqual(result['additional_skills'], ['source-local-helper'])
+                self.assertEqual(result['additional_roles'], ['source_helper'])
+                self.assertNotIn('[agents.source_helper]', workspace.configuration('python'))
+            self.assertTrue(skill.is_file())
+            self.assertTrue(role.is_file())
+
+    def test_generated_toml_and_session_overrides_preserve_unicode_paths(self):
+        import tomllib
+        import session
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / ('Xray path ' + chr(0x1F680))
+            (root / '.codex').mkdir(parents=True)
+            with patch.object(workspace, 'ROOT', root):
+                content = workspace.configuration(str(root / 'python.exe'))
+            (root / '.codex/config.toml').write_text(content, encoding='utf-8', newline='\n')
+            parsed = tomllib.loads(content)
+            self.assertEqual(parsed['mcp_servers']['xray_gopls_windows']['command'], str(root / 'python.exe'))
+            arguments = session.configuration_args(root)
+            for index in range(1, len(arguments), 2):
+                tomllib.loads(arguments[index])
+            self.assertEqual(parsed['mcp_servers']['xray_gopls_windows']['args'][0],
+                             str(root / '.agents/scripts/xray_mcp.py'))
+
     def test_full_role_and_mcp_configuration_is_retained(self):
         import tomllib
         config = tomllib.loads(workspace.configuration('python'))

@@ -1,259 +1,117 @@
 # Documentation
 
-Xray Core DevKit supplies Codex skills, specialized roles and the supporting
-analysis, process, accounting and orchestration tools. It contains no Xray
-runtime. Start with the [repository overview](../README.md), then use the guides
-below for the workflow you need.
+Xray Core DevKit is the complete configured Codex toolkit for Xray-oriented
+source work. Begin with [installation](INSTALLATION.md) to copy it into a
+checkout you select. Use the [file map](FILES.md) to find every distributed
+component and its purpose.
 
-## Choose the correct root
+## Choose the correct directory
 
-The **DevKit root** is the downloaded or cloned distribution containing
-`devkit.py`. Run installation, update, distribution verification and packaging
-there. The **source root** is the explicitly selected Xray checkout receiving
-the toolkit. Run workspace setup, Codex sessions, Go analysis and source work
-there. The source module must remain `github.com/xtls/xray-core`.
+The **DevKit root** is the download containing `devkit.py`. Run distribution
+verification, installation, updates and packaging there. It is a tooling
+repository, without an Xray `go.mod`.
 
-Installation copies ordinary local files. The installed source checkout does
-not depend on the DevKit checkout remaining available. Installing the toolkit
-does not select a source task, attach another project or grant publication
-authority. Supply the actual root, task, contract, baseline, write set and Git
-policy using [project scope](PROJECT_SCOPE.md).
+The **source root** is the explicitly selected Xray Git checkout receiving the
+toolkit. Run workspace setup, startup, sessions, Go analysis and source work
+there. Its module must remain `github.com/xtls/xray-core`. Installation copies
+ordinary local files; the installed checkout has no runtime dependency on the
+DevKit download.
 
-## Install, update and start
+Copying the toolkit does not select a source task or grant publication
+authority. The human supplies the root, task, contract, comparison baseline,
+write set and Git policy through [project scope](PROJECT_SCOPE.md).
 
-Follow [installation](INSTALLATION.md) for requirements, locked dependency
-provisioning, conflict handling and the external runtime prerequisites. These
-commands are a short route through that guide; paths are illustrative.
+## Find the right guide
 
-From the DevKit root:
+- [Installation](INSTALLATION.md): prerequisites, first copy, dependency
+  provisioning, setup, fresh sessions, updates and common failures.
+- [Configuration](CONFIGURATION.md): editable policy files, generated host
+  settings, exact model/context/MCP values and existing-config handling.
+- [File map](FILES.md): scripts, settings, skills, references, roles and tests.
+- [Project scope](PROJECT_SCOPE.md): owner-supplied inputs and work authority.
+- [Workflow and evidence](WORKFLOW.md): ownership, independent review, focused
+  validation, source accounting and checkpoint boundaries.
+- [Go and MCP analysis](ANALYSIS.md): references, imports, syntax, reachability,
+  graph freshness and process lifetime.
+- [Accounting and source export](ACCOUNTING_AND_EXPORT.md): owner catalogs,
+  exact Git blobs, export manifests and ancestry checks.
+- [External orchestration](ORCHESTRATION.md): Linux/WSL prerequisites, Gas City,
+  Beads, Dolt, verified input batches, isolated workers and result integration.
+- [Maintenance](MAINTENANCE.md): tooling regression contexts, public-content
+  review, manifests and packaging.
+- [Third-party notices](../THIRD_PARTY_NOTICES.md): component versions, provenance
+  and license terms. The toolkit [license](../LICENSE) does not replace them.
 
-```powershell
-python devkit.py verify
-python audit.py
-python devkit.py install --target D:/Work/Xray-core --dry-run
-python devkit.py install --target D:/Work/Xray-core
-```
+The [agent pack](../.agents/CODEX_PACK.md) connects the accepted human scope to
+skills, role routing and evidence policy. [AGENTS.md](../AGENTS.md) applies to
+maintenance of the DevKit itself; installed source projects retain their own
+human instructions.
 
-From the installed source root:
+## Skills and roles
 
-```powershell
-python .agents/scripts/dependencies.py install --tools D:/Tools/xray-analysis
-python .agents/scripts/workspace.py setup --analysis-tools D:/Tools/xray-analysis
-python .agents/scripts/workspace.py verify
-python .agents/scripts/check_core.py
-python .agents/scripts/session.py --
-```
+Each skill is an actual entrypoint with separately maintained references and
+scripts. Those linked files are part of the distribution.
 
-Use `dependencies.py status --tools D:/Tools/xray-analysis` to inspect and reuse
-an existing matching tool installation. Supply your own Codex authentication.
-An adopted official upstream baseline requires an explicit reviewed revision;
-setup's default local HEAD is only a comparison selection.
-
-To update, obtain a newer reviewed DevKit copy and run from that DevKit root:
-
-```powershell
-python devkit.py update --target D:/Work/Xray-core --dry-run
-python devkit.py update --target D:/Work/Xray-core
-```
-
-The installer checks recorded hashes and preserves conflicting local edits for
-explicit reconciliation. Rerun workspace setup after an accepted update and
-start a fresh session when settings, role definitions or launchers changed.
-See [configuration](CONFIGURATION.md) for existing-config handling and every
-generated setting.
-
-## Guide navigation
-
-- [Project scope and authority](PROJECT_SCOPE.md): the inputs a source owner
-  supplies, permitted work modes, contracts and publication boundaries.
-- [Workflow and evidence](WORKFLOW.md): startup, reachable ownership, independent
-  review, focused validation, source accounting and checkpoint rules.
-- [Installation](INSTALLATION.md): distribution installation/update, analysis
-  dependencies, fresh sessions and prerequisites.
-- [Configuration](CONFIGURATION.md): baseline/branch guards, optional project
-  policy, models, context settings, MCP profiles and ignored host state.
-- [Go and source analysis](ANALYSIS.md): semantic references, package consumers,
-  syntax, reachability, graph freshness and guarded command lifetime.
-- [Accounting and source export](ACCOUNTING_AND_EXPORT.md): reviewed owner
-  catalogs, exact Git blob measurements, export manifests and ancestry checks.
-- [External orchestration](ORCHESTRATION.md): the complete Gas City/Beads/Dolt
-  runtime, selected WSL environment, verified input batches, worker provisioning,
-  result collection and integration.
-- [Maintenance](MAINTENANCE.md): toolkit regressions, public content review,
-  manifest verification and distribution packaging.
-- [Third-party notices](../THIRD_PARTY_NOTICES.md): dependency provenance and
-  license terms; the toolkit's own [license](../LICENSE) does not replace them.
-
-The [agent pack](../.agents/CODEX_PACK.md) is the coordinating instruction set.
-It connects the human's accepted scope to the skills, worker routing and
-evidence policy. The [contributor instructions](../AGENTS.md) apply to toolkit
-maintenance.
-
-## The eleven skills
-
-Each link opens the actual maintained skill entrypoint, including its linked
-references and commands.
-
-- [xray-core-start](../.agents/skills/xray-core-start/SKILL.md): report the
-  selected root, branch/HEAD, baseline, remotes, policy and dirty paths. Startup
-  reports facts without starting implementation, indexing or publication.
+- [xray-core-start](../.agents/skills/xray-core-start/SKILL.md): report selected
+  root, branch/HEAD, baseline, remotes, policy and dirty paths without starting
+  implementation, indexing or publication.
 - [xray-fork-research](../.agents/skills/xray-fork-research/SKILL.md): investigate
-  upstream behavior, dependencies, licensing and source evidence before deciding
-  whether a change is needed.
+  upstream behavior, dependencies, licensing and source evidence.
 - [xray-code-analysis](../.agents/skills/xray-code-analysis/SKILL.md): trace Go
-  ownership, references, import impact and named removal questions with the
-  applicable source/build profile.
+  ownership, references, consumers and removal questions for the selected build.
 - [xray-fork-implement](../.agents/skills/xray-fork-implement/SKILL.md): implement
-  an accepted bounded slice, validate and independently review the integrated
-  result, then apply the owner's explicit checkpoint policy.
+  an accepted bounded slice, validate it and arrange independent review.
 - [xray-orchestration](../.agents/skills/xray-orchestration/SKILL.md): dispatch
-  useful independent lanes early, deliver verified external inputs and coordinate
-  isolated worker results. Its [parallel batch reference](../.agents/skills/xray-orchestration/references/parallel-batches.md)
-  gives the advisory batch contract.
+  useful independent lanes early and coordinate verified worker inputs/results.
 - [adversarial-reviewer](../.agents/skills/adversarial-reviewer/SKILL.md): challenge
-  a substantial stable change across runtime, concurrency, security and release
-  boundaries.
+  substantial changes across runtime, concurrency, security and release boundaries.
 - [security-threat-model](../.agents/skills/security-threat-model/SKILL.md): build
   a source-grounded threat model when explicitly requested.
 - [xray-fork-android-validation](../.agents/skills/xray-fork-android-validation/SKILL.md):
-  qualify an accepted executable core artifact's build, bindings, native loading,
-  ABI, lifecycle and cleanup within the supplied artifact/device scope.
+  qualify an accepted executable core artifact within its build/device scope.
 - [xray-fork-checkpoint](../.agents/skills/xray-fork-checkpoint/SKILL.md): checkpoint
-  exact reviewed owned paths under the explicitly authorized repository/ref policy.
-- [xray-public-ci](../.agents/skills/xray-public-ci/SKILL.md): verify an explicitly
-  authorized filtered source export and follow CI on that exact public tree.
-- [handoff](../.agents/skills/handoff/SKILL.md): preserve an exact baseline, owned
-  changes, validation and remaining gates for continuation.
+  reviewed owned paths under explicit repository/ref authority.
+- [xray-public-ci](../.agents/skills/xray-public-ci/SKILL.md): verify an authorized
+  filtered source export and follow CI on that exact public tree.
+- [handoff](../.agents/skills/handoff/SKILL.md): preserve exact source, owned
+  changes, evidence and remaining gates for continuation.
 
-## The eight worker roles
+Main keeps the human-selected primary model and owns integration, validation
+and Git. Eight domain roles provide bounded assignments:
 
-Main retains the human-selected model and owns scope, integration, validation
-and Git. These role files define bounded assignments; their `sandbox_mode`
-fields do not create a separate security boundary. Actual access comes from the
-parent session's permissions.
-
-- [mu_explorer](../.codex/agents/mu_explorer.toml): one narrow read-only code-path
-  question; `gpt-6-luna`, high effort.
-- [mu_investigator](../.codex/agents/mu_investigator.toml): one bounded cross-file
-  or cross-subsystem technical question; `gpt-6.1-sol`, high effort.
-- [mu_upstream_researcher](../.codex/agents/mu_upstream_researcher.toml): one
-  upstream, dependency, licensing or external evidence lane; `gpt-6.1-sol`, high.
+- [mu_explorer](../.codex/agents/mu_explorer.toml): one narrow read-only code path;
+  `gpt-6-luna`, high.
+- [mu_investigator](../.codex/agents/mu_investigator.toml): one bounded technical
+  question spanning files or subsystems; `gpt-6.1-sol`, high.
+- [mu_upstream_researcher](../.codex/agents/mu_upstream_researcher.toml): external,
+  upstream, dependency or licensing evidence; `gpt-6.1-sol`, high.
 - [mu_go_worker](../.codex/agents/mu_go_worker.toml): an accepted disjoint Go write
-  set with assigned validation; `gpt-6.1-sol`, high.
+  set and its validation; `gpt-6.1-sol`, high.
 - [mu_reviewer](../.codex/agents/mu_reviewer.toml): stable-diff correctness,
-  regressions and missing focused tests; `gpt-6.1-sol`, high.
+  regressions and focused test gaps; `gpt-6.1-sol`, high.
 - [mu_performance_reviewer](../.codex/agents/mu_performance_reviewer.toml): hot-path
   cost, allocations, contention and bounded backpressure; `gpt-6.1-sol`, high.
-- [mu_critical_reviewer](../.codex/agents/mu_critical_reviewer.toml): substantial
-  runtime, concurrency, security, Android and release review; `gpt-6.1-sol`, high.
-- [mu_deep_reviewer](../.codex/agents/mu_deep_reviewer.toml): one named technical
-  discriminator left unresolved by Sol, with its existing evidence;
-  `gpt-6-astra`, high. Missing inputs or authority require those inputs, rather
-  than model escalation. Only one Astra adviser is active.
+- [mu_critical_reviewer](../.codex/agents/mu_critical_reviewer.toml): runtime,
+  concurrency, security, Android and release review; `gpt-6.1-sol`, high.
+- [mu_deep_reviewer](../.codex/agents/mu_deep_reviewer.toml): one evidenced technical
+  discriminator unresolved by Sol; `gpt-6-astra`, high, one active adviser.
 
-Configured native capacity is 23, subject to the current session and host limits.
-Use native children for bounded interactive work and the full external runtime
-for durable isolated work or verified snapshot delivery. The coordinator records
-the ready frontier, dependencies, slots and ownership before dispatch; capacity
-is not a target worker count. See [orchestration](ORCHESTRATION.md).
+Capacity 23 is a configured bound, subject to observed session/host limits.
+Native children do not spawn children. Role `sandbox_mode` fields express
+intent; the parent session's actual permissions govern access. Missing inputs,
+authority or model access require those inputs, rather than a stronger model.
 
-## First tasks in an installed checkout
+## First task after startup
 
-Replace the placeholders with actual project evidence. These are task patterns,
-not authority to modify a checkout merely because the toolkit is installed.
+Supply concrete evidence instead of leaving these placeholders unresolved:
 
-**Establish scope:** “Use source root `<root>` at `<branch>/<SHA>`, compare with
-adopted upstream `<SHA>`, and read contract `<path>`. Begin read-only. Report
-startup facts, dirty exclusions and missing inputs before proposing changes.”
+> Use source root `<root>` at `<branch>/<SHA>` and contract `<path>`. The adopted
+> upstream comparison is `<SHA>`. Begin read-only and report dirty exclusions,
+> reachable owners and missing inputs. The authorized work is `<behavior>` in
+> `<write set>` with acceptance `<observable result>`, checks `<commands>` and Git
+> policy `<none/local commit/exact remote-ref>`.
 
-**Research:** “Use xray-fork-research to determine whether upstream `<ref>`
-already handles `<trigger/behavior>`. Trace the reachable owner and consumer;
-compare native reuse and the smallest justified change. Return exact evidence
-and unknowns. No edits or Git operations.”
-
-**Implement an accepted change:** “Use xray-fork-implement for `<behavior>` in
-the exact write set `<paths>`, preserving `<dirty exclusions>`. Acceptance is
-`<observable result>`; run `<focused checks>` through the resource guard.
-Arrange independent review. Git policy is `<none/local commit/exact remote-ref>`.”
-
-**Review:** “Review the stable diff from `<base>` to `<candidate>` against
-`<contract>`, using supplied `<validation receipt>`. Report realistic triggers,
-consequences and exact locations. Use adversarial-reviewer for the substantial
-runtime/concurrency/security boundary. No edits or publication.”
-
-## Tooling and local state
-
-The distribution includes the implementations used by the guides:
-
-- [workspace.py](../.agents/scripts/workspace.py),
-  [check_core.py](../.agents/scripts/check_core.py) and
-  [session.py](../.agents/scripts/session.py) configure, verify and launch the
-  selected checkout. [context_diagnostics.py](../.agents/scripts/context_diagnostics.py)
-  inspects bounded local context-accounting evidence.
-- [dependencies.py](../.agents/scripts/dependencies.py) installs the pinned
-  [analysis lock](../.agents/dependencies/analysis-lock.json) and npm locks.
-  [xray_analysis.py](../.agents/scripts/xray_analysis.py) and
-  [xray_mcp.py](../.agents/scripts/xray_mcp.py) route Go/package/graph tools;
-  [go_mcp.py](../.agents/scripts/go_mcp.py),
-  [package_map.py](../.agents/scripts/package_map.py) and
-  [inspect_go.py](../.agents/scripts/inspect_go.py) provide the underlying helpers.
-  Provisioned analysis dependencies include pinned gopls v0.23.0, ast-grep and
-  deadcode. The configured MCP set includes Windows gopls, GitNexus, Context7 and
-  Repomix when installed; Android gopls is opt-in.
-- [resource_guard.py](../.agents/scripts/resource_guard.py) owns bounded command
-  descendants and isolated scratch. [mcp_backend.py](../.agents/scripts/mcp_backend.py)
-  manages backend deadlines, cancellation, idle eviction and initialization replay.
-- [source_size.py](../.agents/scripts/source_size.py),
-  [public_export.py](../.agents/scripts/public_export.py) and
-  [remote_evidence.py](../.agents/scripts/remote_evidence.py) measure exact Git
-  content, verify filtered exports and record ref-observation freshness.
-- [orchestration.py](../.agents/scripts/orchestration.py),
-  [model_router.py](../.agents/scripts/model_router.py),
-  [worker_context.py](../.agents/scripts/worker_context.py) and
-  [runtime_hooks.py](../.agents/scripts/runtime_hooks.py) support external admission,
-  model routing and worker integration. The [runtime lock](../.agents/runtime-lock.json),
-  [city configuration](../.agents/orchestration/city.toml) and
-  [host example](../examples/orchestration.json) retain the complete optional flow.
-
-Host setup generates ignored `.local/workspace/context.json` and
-`.codex/config.toml` in the installed checkout. The installer records its hashes
-in `.local/workspace/devkit-install.json`; prepared workers use
-`.local/workspace/worker.json`. Managed scratch lives under
-`.local/host/transient/`; keep lasting evidence outside scratch and outside the
-public distribution. Account authentication is supplied separately. See
-[configuration](CONFIGURATION.md) and [orchestration](ORCHESTRATION.md) for the
-complete local-state layout and settings.
-
-The generated context policy requests 872000 nominal tokens, 95% effective
-capacity and compaction at 80% of effective capacity, scope `total`. Local
-catalog checks, configuration generation and a successful launch are distinct
-from authenticated model access and confirmed session adoption.
-
-## Tests
-
-The [distribution tests](../tests/) check toolkit packaging, audit and
-installation behavior. The `test_*.py` files in
-[.agents/scripts](../.agents/scripts/) exercise analysis helpers, process
-lifetime, configuration, accounting, export and orchestration behavior. See
-[maintenance](MAINTENANCE.md) for the guarded test commands, fixture setup and
-skip reporting requirements.
-
-These are toolkit regressions. Xray source-core tests must match the source
-revision and its behavior contracts; they are outside this distribution's
-payload. A source test result cannot be transferred to a different revision
-merely by copying a test or installing the toolkit.
-
-## What the evidence establishes
-
-Distribution checks cover their recorded Python, installer/update and synthetic
-protocol fixtures. Windows host results do not qualify Linux execution, an
-authenticated external model run or every configured model. The Linux worker
-setup and supported analysis profiles remain available, with their actual
-invocation and workload results to be recorded separately.
-
-Likewise, source/host tests, cross-builds, executable artifacts/bindings, Android
-devices, network behavior, performance and release acceptance each need their
-own evidence. Passing toolkit startup, a generated MCP entry or a worker's DONE
-result does not establish those outcomes. The detailed limits and reporting
-rules are in [workflow](WORKFLOW.md), [analysis](ANALYSIS.md) and
-[maintenance](MAINTENANCE.md).
+Choose research, implementation, review, artifact validation or handoff from the
+skills above. Installation and a passing startup do not authorize a task by
+themselves. Keep source/host, artifact, device, network, performance and release
+outcomes separate; [workflow](WORKFLOW.md) explains the evidence boundaries.

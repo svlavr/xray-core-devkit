@@ -7,6 +7,23 @@ public tooling project. It contains no product runtime, proprietary module
 contracts, project stage history, source acceptance or publication destination.
 It does not have to support arbitrary platforms or unrelated projects.
 
+## Choose the task root
+
+For toolkit maintenance, use the DevKit repository containing `devkit.py` as
+the task root. Its files, packaging and Python tools are the subject of the
+task. Use [maintenance](MAINTENANCE.md) for distribution checks. The command
+`python .agents/scripts/workspace.py validate` checks the retained skill/role
+inventory without source setup. `workspace.py setup`, `check_core.py` and Go
+analysis require an installed Xray source checkout; they are not DevKit-root
+startup checks.
+
+For source-core work, the owner selects an Xray checkout with module
+`github.com/xtls/xray-core`. Install the toolkit there explicitly, then run the
+source setup and startup sequence in [installation](INSTALLATION.md) and
+[configuration](CONFIGURATION.md). An installed copy is independent of the
+downloaded DevKit repository. Changes made to this distribution do not modify
+or validate any installed source checkout.
+
 Installing or inspecting it does not connect any existing checkout. The human
 chooses whether and where to integrate it. Use the selected checkout's current
 files and instructions; historical snapshots are evidence only when explicitly
@@ -30,14 +47,19 @@ owner-approved scope document:
   automatic checkpoint policy; this devkit does not supply one by default.
 - Allowed external inputs/disclosure and any export/CI destination and allowlist.
 
+For toolkit maintenance, record the same applicable task facts: exact DevKit
+revision, requested tool/document behavior, owned files, dirty exclusions,
+validation and Git policy. An upstream runtime baseline, runtime contract or
+device artifact is required only when the task actually makes that claim.
+
 No fixed module list or stage machine is implied. The human's current task and
 its accepted contract own scope. Read-only research produces evidence/proposals;
 it does not grant edits. A consumer's integration task does not authorize source
 fork changes: report an alleged gap with exact revisions, current APIs/adapters,
 required behavior and the smallest proposal, then obtain source-owner authority.
 
-Toolkit-only tasks can use this repository as their task root without pretending
-it is a Go module. Go analysis, runtime implementation, Android validation and
+Toolkit-only tasks use this repository without treating it as a Go module.
+Go analysis, runtime implementation, Android validation and
 source publication remain unavailable until their actual source/artifact inputs
 exist. Missing prerequisites are explicit `NEEDS_CONTEXT`/`BLOCKED` outcomes,
 not empty inventories, fabricated success or grounds for weaker tests.
@@ -52,13 +74,16 @@ For source-size accounting, the owner supplies/reviews `.agents/metrics/modules.
 and an exact upstream baseline before initializing
 `.agents/metrics/source-size.json`. The catalog describes this source project's
 actual ownership; it must not recreate private module names or count a shared
-path twice. See `WORKFLOW.md` for accounting and checkpoint rules.
+path twice. See [workflow](WORKFLOW.md) for checkpoint policy and
+[accounting and export](ACCOUNTING_AND_EXPORT.md) for schemas and commands.
 
 Filtered public source export additionally requires an owner-supplied
 `.agents/public-export.json` reviewed against the selected source and exact
-public destination. Read `.agents/scripts/public_export.py --help` and the
-manifest parser before supplying its current schema. Do not infer a manifest,
-remote, allowlist or publication authority from the devkit's own Git origin.
+public destination. From that installed source root, run
+`python .agents/scripts/public_export.py --help` and inspect the
+[manifest parser](../.agents/scripts/public_export.py) before supplying its
+current schema. Do not infer a manifest, remote, allowlist or publication
+authority from the devkit's own Git origin.
 Missing configuration stops export; it must never fall back to publishing HEAD.
 
 The retained `mu_*` role identifiers are stable configuration names, not source

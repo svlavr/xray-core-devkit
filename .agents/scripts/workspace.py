@@ -9,14 +9,21 @@ import shutil
 import stat
 import subprocess
 import sys
+import tempfile
 import tomllib
 
 ROOT = Path(__file__).resolve().parents[2]
 CONTEXT = ROOT / '.local/workspace/context.json'
 FLAGS = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
 HOST_FILES = ('.local/workspace/context.json', '.codex/config.toml')
+TEMP_PROBE = '.local/workspace/.setup-probe.tmp'
 PROJECT_KEYS = {'baseline', 'expected_branch', 'integrating_url', 'integrating_branch',
                 'public_url', 'public_branch', 'anchor', 'public_push_mode'}
+MANAGED_ROLES = {'mu_explorer', 'mu_investigator', 'mu_upstream_researcher', 'mu_go_worker',
+                 'mu_reviewer', 'mu_critical_reviewer', 'mu_performance_reviewer', 'mu_deep_reviewer'}
+MANAGED_SKILLS = {'adversarial-reviewer', 'handoff', 'security-threat-model', 'xray-code-analysis',
+                  'xray-core-start', 'xray-fork-android-validation', 'xray-fork-checkpoint',
+                  'xray-fork-implement', 'xray-fork-research', 'xray-orchestration', 'xray-public-ci'}
 
 
 def context_path():
@@ -98,18 +105,12 @@ def validate():
     from language_policy import WORKER_INSTRUCTIONS
     roles = sorted((ROOT / '.codex/agents').glob('*.toml'))
     skills = sorted((ROOT / '.agents/skills').glob('*/SKILL.md'))
-    if len(roles) != 8 or len(skills) != 11:
-        raise RuntimeError('Expected 8 domain roles and 11 project skills')
-    expected_roles = {'mu_explorer', 'mu_investigator', 'mu_upstream_researcher', 'mu_go_worker',
-                      'mu_reviewer', 'mu_critical_reviewer', 'mu_performance_reviewer', 'mu_deep_reviewer'}
-    if {path.stem for path in roles} != expected_roles:
-        raise RuntimeError('Unexpected domain role inventory')
-    expected_skills = {'adversarial-reviewer', 'handoff', 'security-threat-model', 'xray-code-analysis',
-                       'xray-core-start', 'xray-fork-android-validation', 'xray-fork-checkpoint',
-                       'xray-fork-implement', 'xray-fork-research', 'xray-orchestration', 'xray-public-ci'}
-    if {path.parent.name for path in skills} != expected_skills:
-        raise RuntimeError('Unexpected project skill inventory')
-    for path in roles:
+    missing_roles = MANAGED_ROLES - {path.stem for path in roles}
+    missing_skills = MANAGED_SKILLS - {path.parent.name for path in skills}
+    if missing_roles or missing_skills:
+        raise RuntimeError('Missing toolkit components: roles=' + ','.join(sorted(missing_roles))
+                           + '; skills=' + ','.join(sorted(missing_skills)))
+    for path in (path for path in roles if path.stem in MANAGED_ROLES):
         d = tomllib.loads(path.read_text(encoding='utf-8'))
         name = path.stem
         model = 'gpt-6-luna' if name == 'mu_explorer' else 'gpt-6-astra' if name == 'mu_deep_reviewer' else 'gpt-6.1-sol'
@@ -120,7 +121,7 @@ def validate():
             raise RuntimeError('Internal worker language policy mismatch: ' + name)
         if d.get('agents', {}).get('enabled') is not False:
             raise RuntimeError('Nested native agents must remain disabled: ' + name)
-    for path in skills:
+    for path in (path for path in skills if path.parent.name in MANAGED_SKILLS):
         parts = path.read_text(encoding='utf-8').split('---', 2)
         if len(parts) != 3:
             raise RuntimeError('Missing skill frontmatter: ' + str(path))
@@ -129,15 +130,19 @@ def validate():
             raise RuntimeError('Skill metadata mismatch: ' + str(path))
     if not (ROOT / '.agents/CODEX_PACK.md').is_file():
         raise RuntimeError('Missing toolkit instructions: .agents/CODEX_PACK.md')
-    return {'skills': len(skills), 'roles': len(roles)}
+    return {'skills': len(MANAGED_SKILLS), 'roles': len(MANAGED_ROLES),
+            'additional_skills': sorted(path.parent.name for path in skills if path.parent.name not in MANAGED_SKILLS),
+            'additional_roles': sorted(path.stem for path in roles if path.stem not in MANAGED_ROLES)}
 
 
 def configuration(python, analysis_tools=None, node=None):
     from context_policy import toml_settings
     from language_policy import PRIMARY_INSTRUCTIONS
-    quote = lambda value: json.dumps(str(value))
+    quote = lambda value: json.dumps(str(value), ensure_ascii=False)
     text = toml_settings() + 'developer_instructions = ' + quote(PRIMARY_INSTRUCTIONS) + '\n\n[features]\nmulti_agent_v2 = true\n\n[agents]\nenabled = true\ndefault_subagent_model = "gpt-6.1-sol"\ndefault_subagent_reasoning_effort = "high"\nmax_concurrent_threads_per_session = 23\ninterrupt_message = true\n'
     for role in sorted((ROOT / '.codex/agents').glob('*.toml')):
+        if role.stem not in MANAGED_ROLES:
+            continue  # Source-owned roles remain available through native discovery.
         d = tomllib.loads(role.read_text(encoding='utf-8'))
         text += f'\n[agents.{d["name"]}]\ndescription = {quote(d["description"])}\nconfig_file = {quote("agents/" + role.name)}\n'
     go_tools = ['go_workspace', 'go_search', 'go_file_context', 'go_package_api', 'go_symbol_references', 'go_diagnostics']
@@ -148,11 +153,11 @@ def configuration(python, analysis_tools=None, node=None):
         if profile:
             args += ['--profile', profile]
         enabled = 'false' if profile == 'android' else 'true'
-        text += f'\n[mcp_servers.{name}]\nenabled = {enabled}\ndefault_tools_approval_mode = "auto"\ncommand = {quote(python)}\nargs = {json.dumps(args)}\nenabled_tools = {json.dumps(allowed)}\nstartup_timeout_sec = 60\ntool_timeout_sec = 240\n'
+        text += f'\n[mcp_servers.{name}]\nenabled = {enabled}\ndefault_tools_approval_mode = "auto"\ncommand = {quote(python)}\nargs = {json.dumps(args, ensure_ascii=False)}\nenabled_tools = {json.dumps(allowed)}\nstartup_timeout_sec = 60\ntool_timeout_sec = 240\n'
     if analysis_tools:
         repomix = Path(analysis_tools) / 'repomix/node_modules/repomix/bin/repomix.cjs'
         if repomix.is_file() and node:
-            text += f'\n[mcp_servers.xray_repomix]\nenabled = true\ncommand = {quote(python)}\nargs = {json.dumps([str(ROOT / ".agents/scripts/resource_guard.py"), "--relay", "--", str(node), str(repomix), "--mcp", "--sandbox", str(ROOT)])}\nstartup_timeout_sec = 60\ntool_timeout_sec = 240\n'
+            text += f'\n[mcp_servers.xray_repomix]\nenabled = true\ncommand = {quote(python)}\nargs = {json.dumps([str(ROOT / ".agents/scripts/resource_guard.py"), "--relay", "--", str(node), str(repomix), "--mcp", "--sandbox", str(ROOT)], ensure_ascii=False)}\nstartup_timeout_sec = 60\ntool_timeout_sec = 240\n'
     text += '\n[mcp_servers.context7]\nenabled = true\nurl = "https://mcp.context7.com/mcp"\n'
     return text
 
@@ -189,7 +194,7 @@ def verify(catalog=None, require_capabilities=False):
         raise RuntimeError('Analysis tools directory unavailable')
     if ctx.get('node') and not Path(ctx['node']).is_file():
         raise RuntimeError('Missing pinned Node executable; run setup')
-    for relative in HOST_FILES:
+    for relative in (*HOST_FILES, TEMP_PROBE):
         host_target(relative)
         if git('ls-files', '--', relative):
             raise RuntimeError('Host settings must never be tracked')
@@ -220,6 +225,25 @@ def host_target(relative):
     return target
 
 
+def atomic_write(path, data):
+    """Replace one complete generated file; preserve prior bytes on failure."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_directory = host_target('.local/workspace')
+    temporary_directory.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=temporary_directory, prefix='.setup-', suffix='.tmp', delete=False) as handle:
+            temporary = Path(handle.name)
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+        temporary = None
+    finally:
+        if temporary is not None and temporary.exists():
+            temporary.unlink()
+
+
 def setup(analysis_tools, baseline=None, catalog=None, require_capabilities=False):
     selection = project_settings()
     selection.update(baseline=baseline or selection.get('baseline') or git('rev-parse', 'HEAD'),
@@ -230,7 +254,7 @@ def setup(analysis_tools, baseline=None, catalog=None, require_capabilities=Fals
     if not tools.is_dir():
         raise RuntimeError('Analysis tools directory unavailable')
     capability_status(catalog, require_capabilities)
-    for relative in HOST_FILES:
+    for relative in (*HOST_FILES, TEMP_PROBE):
         host_target(relative)
         if git('ls-files', '--', relative):
             raise RuntimeError('Refusing tracked host file: ' + relative)
@@ -255,13 +279,20 @@ def setup(analysis_tools, baseline=None, catalog=None, require_capabilities=Fals
         if not expected:
             prior = configuration(old['python'], old['analysis_tools'], old.get('node'))
             expected = hashlib.sha256(prior.encode('utf-8')).hexdigest()
-        if expected != digest:
+        permitted_previous = old.get('previous_generated_config_sha256')
+        if digest not in (expected, permitted_previous):
             raise RuntimeError('Local Codex config was edited; preserve those edits before regeneration')
+        ctx['previous_generated_config_sha256'] = digest
     ctx['generated_config_sha256'] = hashlib.sha256(content.encode('utf-8')).hexdigest()
     context_path().parent.mkdir(parents=True, exist_ok=True)
     config.parent.mkdir(parents=True, exist_ok=True)
-    context_path().write_text(json.dumps(ctx, indent=2) + '\n', encoding='utf-8', newline='\n')
-    config.write_text(content, encoding='utf-8', newline='\n')
+    # The prior verified generated hash makes an interrupted pair recoverable:
+    # a retry accepts only exact old/new generated bytes, never arbitrary edits.
+    atomic_write(context_path(), (json.dumps(ctx, indent=2) + '\n').encode('utf-8'))
+    atomic_write(config, content.encode('utf-8'))
+    if 'previous_generated_config_sha256' in ctx:
+        del ctx['previous_generated_config_sha256']
+        atomic_write(context_path(), (json.dumps(ctx, indent=2) + '\n').encode('utf-8'))
     return verify(catalog, require_capabilities)
 
 

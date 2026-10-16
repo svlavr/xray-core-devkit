@@ -28,7 +28,7 @@ Do not run every tool or a full platform matrix for an ordinary local lookup.
 Do not add another index, analyzer or framework after an unexplained result;
 first check the selected file/symbol, build configuration and index freshness.
 
-## Quick symbol inspection on this Windows host
+## Quick symbol inspection in the selected checkout
 
 Use a fresh output directory; omitting --out creates one automatically.
 
@@ -46,8 +46,8 @@ responses, a cross-file API context and an ast-grep file outline. It records
 HEAD, a Go-source fingerprint and the selected platform; `SOURCE_CHANGED`
 means the combined evidence is not consistent. It reads saved disk files.
 
-The installed `xray_gopls_windows` and `xray_gopls_android` profiles can be used
-directly when available. Confirm `go_workspace` matches this checkout once per
+The configured `xray_gopls_windows` and opt-in `xray_gopls_android` profiles can
+be used directly when their tools are available. Confirm `go_workspace` matches this checkout once per
 task/profile. Profiles explicitly use CGO=0 and no extra tags. For Linux or extra
 tags, use `--profile linux` / `--tags` in the CLI. The pinned adapter converts gopls v0.23.0 reference
 line prose to one-based lines. Do not apply that correction a second time.
@@ -56,13 +56,18 @@ native gopls CLI/LSP for an exact implementation or hierarchy query when needed.
 
 ## Structural search
 
-ast-grep 0.45.3 is `<analysis-tools-root>/bin/ast-grep.exe`.
+The dependency lock pins ast-grep 0.45.3. Provisioning places its Windows binary
+at `<analysis-tools-root>/bin/ast-grep.exe`; confirm that installation before use.
 Use read-only `run`, `scan` and `outline`; validate a query on a known positive
 case before treating zero matches as evidence. No rewrites are implied.
+The PowerShell examples use an illustrative tools root: replace its value with
+the installed host context's actual `analysis_tools` path. `&` invokes the
+executable at the constructed, quoted path.
 
 ```powershell
-<analysis-tools-root>/bin/ast-grep.exe run --lang Go --pattern 'transport.Link { $$$FIELDS }' --json=compact app/dispatcher/default.go
-<analysis-tools-root>/bin/ast-grep.exe run --lang Go --pattern '$LINK.Reader = $VALUE' --json=compact app/dispatcher/default.go
+$analysisTools = 'D:/Tools/xray-analysis'
+& "$analysisTools/bin/ast-grep.exe" run --lang Go --pattern 'transport.Link { $$$FIELDS }' --json=compact app/dispatcher/default.go
+& "$analysisTools/bin/ast-grep.exe" run --lang Go --pattern '$LINK.Reader = $VALUE' --json=compact app/dispatcher/default.go
 ```
 
 These identify syntax, not symbol identity: aliases, other types named Link,
@@ -73,8 +78,10 @@ level. Do not replace semantic references or ordinary text searches with it.
 
 ## Reachability
 
-Installed deadcode is x/tools v0.50.0, built with Go 1.27.0:
-`<analysis-tools-root>/bin/deadcode.exe`.
+The dependency lock selects deadcode from x/tools v0.50.0 and Go 1.27.0.
+Provisioning places the Windows binary at
+`<analysis-tools-root>/bin/deadcode.exe`; a lock entry alone does not prove it is
+installed or that an existing executable was built with that toolchain.
 
 Run it only when reachability is the question. Prefer a clean committed source
 snapshot outside the checkout for whole-program scans. State GOOS, GOARCH,
@@ -82,9 +89,10 @@ CGO, tags, package roots, test-root inclusion and generated-report policy.
 Use bounded time/memory and keep cache-heavy executions serialized.
 
 ```powershell
-<analysis-tools-root>/bin/deadcode.exe -json ./main
-<analysis-tools-root>/bin/deadcode.exe -test -json ./...
-<analysis-tools-root>/bin/deadcode.exe -json -whylive=github.com/xtls/xray-core/core.New ./main
+$analysisTools = 'D:/Tools/xray-analysis'
+& "$analysisTools/bin/deadcode.exe" -json ./main
+& "$analysisTools/bin/deadcode.exe" -test -json ./...
+& "$analysisTools/bin/deadcode.exe" -json -whylive=github.com/xtls/xray-core/core.New ./main
 ```
 
 The binary uses RTA; VTA is not a deadcode mode. `-whylive` shows one preferred
