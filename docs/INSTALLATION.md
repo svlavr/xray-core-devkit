@@ -254,13 +254,3 @@ HEAD. See [configuration](CONFIGURATION.md) for branch and baseline guards.
 Toolkit checks cover tooling and synthetic fixtures only. Real Xray behavior,
 Android artifacts/devices, network routes, performance, authenticated workers
 and releases require their own exact-source evidence.
-
-## Repeated desktop approval requests
-
-Setup preserves the user's global permission policy. If a chat created through
-Codex unexpectedly runs with workspace access, compare its effective policy
-with the source chat instead of repeatedly accepting shell commands. See
-[desktop chat permissions](CONFIGURATION.md#desktop-chat-permissions) for the
-opt-in named-profile configuration, the running app's one-time profile selection
-and the actual new-chat verification boundary. Installation does not enable full
-access or silently reset an explicitly restricted chat.

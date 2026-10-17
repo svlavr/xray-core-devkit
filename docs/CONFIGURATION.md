@@ -132,66 +132,6 @@ Pass the selected baseline again if it is not in `.agents/project.json`.
 Regeneration applies new configuration; fresh sessions/processes adopt new
 roles and launchers. Existing chats can retain their old configuration.
 
-## Desktop chat permissions
-
-Project setup and selected-role execution inherit the owner's Codex permissions.
-They do not select full access, edit the global user config or change the current
-desktop chat's access. Keep permission policy in the user configuration rather
-than in generated checkout config. Repeating setup will then leave it intact.
-
-A supported named profile can represent an owner's existing full-access choice.
-This is an **opt-in user setting**, not an installation default. In the user
-`config.toml` under `CODEX_HOME` (normally `~/.codex`), the complete relevant
-settings are:
-
-```toml
-approval_policy = "never"
-default_permissions = "mu-full-access"
-
-[permissions.mu-full-access]
-description = "MU full access, selected by the workspace owner"
-
-[permissions.mu-full-access.filesystem]
-":root" = "write"
-
-[permissions.mu-full-access.network]
-enabled = true
-```
-
-Edit existing top-level keys in place; do not append duplicate keys underneath
-another table. Save the original local config. Do not combine this configuration
-with legacy `sandbox_mode` or `sandbox_workspace_write` settings. Preserve all
-unrelated model, authentication, MCP and project settings. The profile grants
-full host filesystem and network access; use it only where the owner chooses
-that policy. A restricted source chat must retain its restrictions.
-
-The inspected desktop build `26.1013.3656.0` has a delegated-chat fallback that
-can replace the built-in full-access choice with workspace access and approval
-requests when the source chat's permission state is unavailable. A named profile
-survives that selector branch, but a named **config default alone is insufficient**:
-the desktop's saved host selection takes precedence.
-
-After configuring the profile, select **`mu-full-access`** in the desktop
-composer's permissions control once. Selecting the ordinary built-in Full
-access entry is a different choice. Config file edits do not update the running
-app's cached selection or an existing chat's effective permissions. The toolkit
-has no supported API to perform that UI selection. New chats created directly
-and chats created by `create_thread` need separate checks through their actual
-first turn; do not promise prompt-free operation from a config check alone.
-
-For the inspected build, source-selector controls and a real native server
-confirmed named full access as `dangerFullAccess` / `never`; explicit read-only
-selection remained `readOnly` / `on-request`. Those checks do not establish that
-a particular desktop chat adopted the profile. Verify the created chat's actual
-turn policy and the operation that previously prompted. Do not test this by
-starting a second server on an active chat, editing stored rollout/SQLite state,
-repeatedly requesting escalation or broadly allowing all shell commands.
-
-See the official [permission profiles](https://learn.chatgpt.com/docs/permissions)
-and [sandboxing](https://learn.chatgpt.com/docs/sandboxing) documentation for the
-installed version's supported settings. An MCP tool approval setting is separate
-from host shell permissions; changing it cannot repair this desktop fallback.
-
 ## Native agents, models and language
 
 The generated config sets `features.multi_agent_v2 = true`, `agents.enabled =
