@@ -8,6 +8,8 @@ nudge_dispatcher = "supervisor"
 
 [providers.codex]
 base = "builtin:codex"
+command = "/usr/local/lib/mu-runtime/role_bootstrap.py"
+resume_command = "/usr/local/lib/mu-runtime/role_bootstrap.py resume {{.SessionKey}}"
 ready_delay_ms = 3000
 args_append = ["-c", "agents.enabled=false"]
 

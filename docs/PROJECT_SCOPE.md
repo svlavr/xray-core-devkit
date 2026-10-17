@@ -70,6 +70,14 @@ uses `.local/workspace/worker.json` with its exact base/local queue. Check the
 actual Go MCP `go_workspace` once per task/profile; a host identity report alone
 does not prove its source root. Fresh sessions adopt changed role/launcher config.
 
+Execution has three distinct roots: the standalone DevKit can expose its
+maintained catalog; an installed Go source checkout owns source execution; a
+frozen external advisory bundle owns only its selected profile/tooling/skills and
+assigned evidence aliases. Catalog reading grants no source setup or execution
+authority. Implementation runs only in the owner-prepared isolated source root,
+with its exact base/local queue and actual Go MCP root. Explicit local handoff
+commit authority is separate from main's integrated checkpoint/push policy.
+
 For source-size accounting, the owner supplies/reviews `.agents/metrics/modules.json`
 and an exact upstream baseline before initializing
 `.agents/metrics/source-size.json`. The catalog describes this source project's

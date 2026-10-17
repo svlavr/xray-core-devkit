@@ -25,6 +25,27 @@ WSLInterop registration is not a per-distribution enable flag; do not disable it
 globally or restart shared WSL to satisfy an existence check. The maintained
 launcher checks distribution settings and the current mount inventory.
 
+## Bind the selected role
+
+Read `session.py --list-roles` and select the competency from its actual
+description. Use an advertised native type when available. An existing session
+without native admission can run `session.py --role <name> --exec ...`; report
+CLI profile execution separately from native custom-type admission. The ordinary
+no-role launcher preserves the user's parent model. Do not ask for a restart,
+model choice or repeated routine authorization merely to execute a known role.
+
+For external packets set `role` explicitly; a role name in `body` or a model pool
+name does not load its instructions. Optional `skills` adds actual installed
+skill packages, including non-xray names. The adapter freezes selected profile,
+helpers, skills/references and public authority docs before native creation.
+Mode-specific bootstrap binds the actual source root and MCP configuration,
+trusts only that invocation's existing four reviewed hooks, and retains pinned
+helpers on resume. The loader recovers missing trigger fields from the actual
+native session. First-upgrade unbound identities retain their generic native
+execution through a one-time hash-bound allowlist; never fabricate historical
+role bindings. Preserve old bundles, jobs, identity records and uncollected results. See
+`docs/ORCHESTRATION.md` for source-versus-tooling identities and store namespaces.
+
 ## Early parallel admission
 
 For capability development, apply `xray-feature-delivery`. Ready candidates can
@@ -44,7 +65,7 @@ and actual execution. Main returns observations to the creator/critic, chooses
 on evidence and continues implementation/consumer verification. For competing
 hypotheses use common meaningful acceptance, not votes; workflow/algorithm
 comparisons use `mu_agent_evaluator` under `xray-agent-evaluation`. Advisory
-external packets use `kind=review` with the named competency in the body;
+external packets use `kind=review` with the selected `role` and scoped body;
 experiment execution uses `kind=implement`. These reuse existing pools and
 Sol 6.1 high routing, without a new scheduler or fixed team/idea/finding quota.
 
@@ -52,8 +73,9 @@ Runtime ready outputs can include scoped protocol interoperability, lifecycle
 transition/wait-graph analysis, reachable trust-to-sink security, selected
 target/ABI qualification and controlled performance design/result review.
 Use `xray-protocol-compatibility` or the relevant `xray-runtime-qualification`
-reference and specialist. Supply its actual instructions and exact evidence in
-external `kind=review` packets; pool/model routing alone is not named-role proof.
+reference and specialist. Select its actual `role` and exact evidence in external `kind=review` packets;
+the immutable launch binds the instructions, while pool/model routing alone
+is not named-role proof.
 Critical review retains cross-boundary interactions. No default full roster,
 automatic build matrix or inferred device acceptance; one coupled seam can
 remain local, while independent outputs still use the ready frontier.
@@ -122,7 +144,8 @@ for the new worktree: use a fresh scoped session or native gopls in the new root
 The primary supplies shared graph/context evidence once for the pinned base;
 workers use live scoped Go evidence for their edits.
 
-Worker commits are local handoff artifacts. Record their source-anchor bead,
+Only explicitly authorized external worker commits are local handoff artifacts;
+native children never stage or commit. Record their source-anchor bead,
 worktree, exact commit and changed paths. Do not infer final integration from a
 closed bead: the stock pack can finish with a detached commit and no publication.
 The integrating owner reviews the actual commits, incorporates accepted paths,

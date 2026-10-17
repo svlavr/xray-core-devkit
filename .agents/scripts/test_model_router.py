@@ -1,6 +1,7 @@
 """Cost routing must never turn missing evidence into an Astra worker fan-out."""
 import unittest
-from model_router import select_route,validate_models
+from role_profiles import list_profiles
+from model_router import select_route,resolve_assignment,validate_models
 
 
 class ModelRoutingTests(unittest.TestCase):
@@ -48,6 +49,37 @@ class ModelRoutingTests(unittest.TestCase):
         for limit in (0,24,True,'23'):
             cfg['agent']=[{'name':'codex','max_active_sessions':limit}]
             with self.assertRaisesRegex(RuntimeError,'capacity'):validate_models(cfg)
+
+
+    def test_every_named_profile_reaches_its_actual_instructions_and_model(self):
+        for profile in list_profiles():
+            task={'kind':'explore','bounded':True,'role':profile['role']}
+            if profile['role']=='mu_deep_reviewer':
+                task.update(previous_model='gpt-6.1-sol',blocker='unresolved_technical',
+                            discriminator='one technical discriminator',evidence=['Sol source receipt'])
+            with self.subTest(role=profile['role']):
+                assignment=resolve_assignment(task)
+                for key in ('role','model','effort','developer_instructions','profile_sha256','profile_toml'):
+                    self.assertEqual(assignment[key],profile[key])
+                expected='mu-deep' if profile['role']=='mu_deep_reviewer' else 'mu-explorer' if profile['role']=='mu_explorer' else 'mu-reviewer'
+                self.assertEqual(assignment['target'],expected)
+
+
+    def test_unknown_role_fails_even_when_input_is_missing(self):
+        with self.assertRaises(ValueError):resolve_assignment({'kind':'review','role':'mu_missing','blocker':'missing_input'})
+
+
+    def test_named_sol_role_cannot_be_silently_replaced_by_deep(self):
+        with self.assertRaisesRegex(ValueError,'explicitly'):
+            resolve_assignment({'kind':'review','role':'mu_security_reviewer','previous_model':'gpt-6.1-sol',
+                'blocker':'unresolved_technical','discriminator':'one question','evidence':['receipt']})
+
+
+    def test_legacy_generic_route_makes_no_specialist_claim(self):
+        assignment=resolve_assignment({'kind':'review'})
+        self.assertNotIn('role',assignment)
+        self.assertNotIn('profile_sha256',assignment)
+
 
 
 if __name__=='__main__':unittest.main()

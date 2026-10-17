@@ -1,5 +1,7 @@
 """Hook automation must not trust additional or changed commands."""
 import copy
+import runtime_hooks
+from unittest.mock import patch
 from pathlib import Path
 import unittest
 from runtime_hooks import reviewed_hashes,reviewed_document,prepare_hooks,approved_state,native_fingerprint
@@ -17,6 +19,32 @@ class HookTrustTests(unittest.TestCase):
                        'rows = [{ a = 1, z = 2 }, { a = 3, z = 4 }]\n[nested]\na = true\nz = "text"\n'):
             self.assertEqual(native_fingerprint(tomllib.loads(source)),
                 'sha256:a5e4c8fbdbc75d185b0f2b5291bfb2de10e8c523d6c89248876fd78a97c83176')
+
+    def test_native_event_specific_matchers_preserve_empty_precompact_only(self):
+        # Actual pinned Codex hooks/list distinguishes matcher="" from null:
+        # preCompact -> "", sessionStart -> "startup", userPromptSubmit -> null.
+        # Capture identities before hashing so an incorrect common normalization
+        # cannot make both expected and observed hashes agree accidentally.
+        identities=[]
+        def capture(value):
+            identities.append(copy.deepcopy(value))
+            return native_fingerprint(value)
+        with patch.object(runtime_hooks,'native_fingerprint',side_effect=capture):
+            hashes=reviewed_hashes('/srv/xray-city')
+        self.assertEqual(len(hashes),4)
+        precompact=next(item for item in identities if item['event_name']=='pre_compact')
+        self.assertIn('matcher',precompact)
+        self.assertEqual(precompact['matcher'],'')
+        startup=next(item for item in identities if item['event_name']=='session_start')
+        self.assertEqual(startup['matcher'],'startup')
+        prompts=[item for item in identities if item['event_name']=='user_prompt_submit']
+        self.assertEqual(len(prompts),2)
+        self.assertTrue(all('matcher' not in item for item in prompts))
+        omitted=copy.deepcopy(precompact);omitted.pop('matcher')
+        self.assertNotEqual(native_fingerprint(precompact),native_fingerprint(omitted))
+        for item in identities:
+            self.assertEqual(item['hooks'][0]['timeout'],600)
+            self.assertIs(item['hooks'][0]['async'],False)
 
     def test_only_exact_reviewed_project_hooks_are_accepted(self):
         root=Path('/city');source=str(root/'.codex/hooks.json')

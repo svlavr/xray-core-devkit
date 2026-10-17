@@ -85,6 +85,21 @@ then one Astra High adviser for a named discriminator still unresolved after Sol
 Missing inputs/access/environment/test results require evidence, not escalation.
 After the adviser resolves a question, return implementation to Sol 6.1 High.
 
+Main selects competencies from the actual nineteen maintained profile descriptions,
+then passes `role` to the execution route. Use `session.py --list-roles` for the
+catalog; it also works in the standalone DevKit without source setup. Preserved
+source-owned extra roles/skills remain owner-managed and do not enter this
+catalog or generated mappings automatically. Native `agent_type` admission and
+CLI profile execution are distinct evidence. When an existing session cannot
+admit a named native type, use the installed `session.py --role <name> --exec ...`
+or an external packet with `role`, within the same accepted task. No new chat
+or repeated routine authorization is required. Role execution applies the actual
+TOML instructions, model and high effort; the no-role launcher retains normal
+parent settings. It never enables permissions or tools beyond inherited access.
+External model pools are execution targets, not specialist identities. Frozen
+launches bind the selected profile, helpers, skills and public authority docs
+before a model enters. Preserve active jobs, old bundles and uncollected results.
+
 Use a narrow explorer for one independent path; an investigator for a bounded
 cross-owner question; upstream researcher for material external evidence;
 worker for an accepted disjoint write set. Stable non-trivial diffs receive

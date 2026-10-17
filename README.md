@@ -83,6 +83,19 @@ If you already have the matching dependency layout, use `dependencies.py status
 updates and troubleshooting. Startup reports facts; the human still supplies
 source task, behavior contract, baseline, write set and Git policy.
 
+The launcher can also expose and execute the maintained role profiles:
+
+```powershell
+python .agents/scripts/session.py --list-roles
+python .agents/scripts/session.py --role mu_security_reviewer --exec --json "Review the supplied scope"
+```
+
+Run execution from the configured source checkout. Catalog listing alone works
+in the DevKit root. This fallback executes the role's actual instructions/model;
+it is separate from native child admission. [Role execution](docs/CONFIGURATION.md#selected-role-execution)
+and [frozen external jobs](docs/ORCHESTRATION.md#dispatch-inspect-and-resume)
+keep source identity, inherited access and checkpoint authority explicit.
+
 ## What is configured
 
 - **Skills and roles:** startup, research, Go analysis, implementation,

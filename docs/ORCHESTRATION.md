@@ -188,7 +188,8 @@ workers by the setup adapter. The source bundle itself contains the selected
 branch's reachable history; review that history before transferring it.
 
 Then run `configure` from Windows. It preserves registered rigs and unrelated
-settings, installs the maintained helpers into `/usr/local/lib/mu-runtime`, adds
+settings, installs hash-addressed immutable helper bundles beneath
+`/usr/local/lib/mu-runtime/bundles/`, adds
 the pinned rig roles import and city-scoped adviser directories, validates the
 explicit model policy, and trusts only the four exact reviewed native hooks.
 It creates missing hooks from the reviewed GC 1.5 template; a changed or extra
@@ -223,7 +224,11 @@ python .agents/scripts/orchestration.py start
 python .agents/scripts/orchestration.py status
 ```
 
-`prepare` rejects active/pending rig work and dirty committed-source inputs. It
+`prepare` rejects active/pending rig work and transfers only the exact committed
+HEAD. It records excluded nonignored dirty paths/status in the ignored wave
+receipt and result; those bytes are neither copied as source nor changed or
+required to be committed. This source identity is separate from current tooling
+frozen for a task. Advisory snapshots can still capture exact bounded dirty bytes. It
 exports the exact integration HEAD through a Git bundle into the local queue,
 checks the transferred commit, records a persistent wave/bead ID, and provisions
 all 23 source-pinned native GC worktrees before admitting the worker pool config.
@@ -233,9 +238,12 @@ configuration. Unknown/starting controller state and a live reload failure remai
 errors; preparation never starts a controller to hide them.
 Its manifest includes the city, source SHA, generation, queue, worktree base and
 analysis-tools root. Each pre-start revalidates the slot and local queue, generates
-worker-only ignored context, and verifies/trusts the exact city-bound hooks.
+worker-only ignored context. Before execution the bootstrap verifies the existing
+city-bound hooks and applies only invocation-scoped trust for that prepared cwd
+and those four identities; it does not add per-job trust to user configuration.
 Workers read [PROJECT_SCOPE.md](PROJECT_SCOPE.md) and their dispatched write set. They may
-create local handoff commits and exchange them only with this local queue.
+create local handoff commits only when that exact assignment explicitly
+authorizes them, within their isolated root/base/local queue. They never publish.
 Integration, review and publication belong to the main coordinator.
 
 ## Dispatch, inspect and resume
@@ -248,9 +256,28 @@ context instead of escalating. An unchanged Astra question is not repeated.
 Worker pools are bounded to 23. The city-wide session ceiling is 25, including the
 coordinator and deterministic dispatcher; capacity is a ceiling, not a launch quota.
 
-A one-task packet contains `kind`, a one-line `title` and a scoped `body`.
-Implementation targets `mu-core/codex` and needs a prepared source wave. Adviser
-packets must identify Linux-readable evidence. Do not pass Windows paths:
+A one-task packet contains `kind`, a one-line `title`, scoped `body` and, for a
+selected competency, `role` from the maintained catalog. Optional `skills` names
+add actual installed skill packages, including `adversarial-reviewer`,
+`security-threat-model` and `handoff`. Main selects the role from its description;
+putting a role name in the body alone does not apply its profile. Generic packets
+retain kind-based routing without claiming a specialist. Named Astra packets
+must explicitly select `mu_deep_reviewer` and include the Sol evidence gate.
+
+Implementation targets `mu-core/codex` and requires `base`, exact relative
+`write_set` paths, `acceptance`, `validation` and `stop_conditions`, plus a
+prepared source wave matching that base. Its bead lives in the `rig:mu-core`
+namespace with a `mux-` ID. Advisory beads live in the city namespace with `mc-`
+IDs. Sessions themselves remain city-scoped. Every show/create/comment/claim
+operation must use the assigned bead's store; use `gc bd --rig mu-core` for
+implementation task operations. An old cross-store implementation receipt stops
+for reconciliation without mutating or deleting the existing job.
+
+Both routes freeze launch inputs before admission and reuse durable native IDs
+on replay. `sources` uses the batch alias/ref/path schema below; the host copies
+and verifies those exact bytes. Advisory packets without source aliases can
+perform scoped public research, but must not claim missing local source evidence.
+Do not pass Windows paths:
 
 ```powershell
 python .agents/scripts/orchestration.py dispatch .local/task.json
@@ -304,6 +331,61 @@ scheduler. Native commands remain real mutations and require their normal task
 authority. `stop` releases this adapter's owned keepalive only after native stop
 succeeds; it does not delete stores, worktrees or history.
 
+## Frozen execution identity
+
+Before native creation the receipt binds profile SHA256, exact instructions,
+model/effort, selected skill packages and their references, public authority docs,
+and the needed helper/configuration bytes. Source HEAD identifies committed
+source; per-file hashes separately identify captured WORKTREE documents and
+selected current tooling. A dirty document is never described as the HEAD blob.
+Aliases and the `tooling` namespace cannot collide. Combined inputs retain the
+512-file/64-MiB cap. No private project plans or host settings are copied as source
+inputs; the adapter creates only minimal ignored context for the frozen reader.
+
+Before bootstrap, native Gas City creates and overlays each adviser's mutable
+`.gc/mu-advisers/{{.AgentBase}}` work directory as its Linux user. Concrete pool
+slots expand to distinct paths. This keeps native hook/session-key overlay writes
+away from the canonical reviewed city hooks and immutable snapshots. The host
+generator writes the template only; it does not create those directories via
+Windows UNC. Bootstrap then changes to its bound task root.
+
+Each adviser starts in its own frozen tooling directory and reads only its
+assigned source aliases. It has public retrieval configuration without a Go MCP.
+Mutable launch receipts and scratch live in a separately prepared run directory
+created by the selected Linux user, outside immutable inputs. Implementers start
+in their prepared checkout; the bootstrap regenerates its ignored worker config
+using the frozen adapter and explicit actual Go root. The role, MCP settings,
+prepared cwd and four existing native hook identities reach the invocation as
+TOML-safe overrides. Permissions/approval flags stay inherited.
+
+The provider's start/resume commands use a content-addressed deployed bundle.
+The trigger metadata selects a hash-bound job bootstrap, which re-executes those
+pinned bytes before loading job-specific helpers. Profile/helper changes apply
+to new snapshots; active jobs and resumes keep their original frozen inputs.
+`configure` retains old deployed bundles and receipts. Before the first provider
+switch it records existing unbound native task/session identities in ignored
+`legacy-jobs.json`. Native session wisps come from `session list --state all`,
+separately from city/rig task lists. The record is copied into the immutable deployment and bound by exact path/hash
+in start and resume commands. A retry after failure before that provider switch
+recaptures legitimate work still using the original provider. Once the installed
+provider contains the exact binding, configure verifies/preserves it and never
+adds newer unbound identities.
+
+GC can replace a session's recorded provider command before wake. When trigger
+environment fields are absent, the loader therefore reads the real city session's
+`gc.trigger_bead_id` and `gc.trigger_bead_store_ref`. Bound tasks still use their
+original frozen helpers. Retained pre-upgrade unbound identities use the original
+generic Codex argv/cwd automatically, with explicit legacy attribution and no
+invented role/profile evidence. New unbound tasks and partial immutable bindings
+cannot use that compatibility path. Closed work stays closed; no automatic
+relaunch, reopen, deletion or task rewrite occurs. Preserve active sessions and
+uncollected results, including the one-time identity record.
+
+`configure` still verifies/persists only the exact reviewed city hook inventory
+and preserves unrelated dedicated-user settings. Per-job project/hook trust is
+invocation-only. Changed or extra hooks fail qualification; the bootstrap never
+replaces hooks or installs a blanket trust bypass.
+
 ## Validation boundary and recovery
 
 Synthetic unit tests run without WSL or model credentials. They verify config
@@ -312,11 +394,14 @@ worker alias rejection and reviewed hook fingerprints. An optional installed
 gopls test runs only when gopls is on PATH or `XRAY_TEST_GOPLS` is set.
 
 ```powershell
-python -m unittest discover -s .agents/scripts -p test_orchestration.py
-python -m unittest discover -s .agents/scripts -p test_agent_batch.py
-python -m unittest discover -s .agents/scripts -p test_model_router.py
-python -m unittest discover -s .agents/scripts -p test_worker_context.py
-python -m unittest discover -s .agents/scripts -p test_runtime_hooks.py
+python .agents/scripts/resource_guard.py --timeout 180 -- python -m unittest discover -s .agents/scripts -p test_role_profiles.py
+python .agents/scripts/resource_guard.py --timeout 180 -- python -m unittest discover -s .agents/scripts -p test_session.py
+python .agents/scripts/resource_guard.py --timeout 180 -- python -m unittest discover -s .agents/scripts -p test_role_bootstrap.py
+python .agents/scripts/resource_guard.py --timeout 180 -- python -m unittest discover -s .agents/scripts -p test_orchestration.py
+python .agents/scripts/resource_guard.py --timeout 180 -- python -m unittest discover -s .agents/scripts -p test_agent_batch.py
+python .agents/scripts/resource_guard.py --timeout 180 -- python -m unittest discover -s .agents/scripts -p test_model_router.py
+python .agents/scripts/resource_guard.py --timeout 180 -- python -m unittest discover -s .agents/scripts -p test_worker_context.py
+python .agents/scripts/resource_guard.py --timeout 180 -- python -m unittest discover -s .agents/scripts -p test_runtime_hooks.py
 ```
 
 No external Luna/Sol/Astra execution, WSL provisioning, real queued model run or

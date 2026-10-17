@@ -199,6 +199,11 @@ raise SystemExit(0 if result['allowed'] else 1)
 def configure(data):
     from context_policy import settings
     template = tomllib.loads((ROOT / '.agents/orchestration/city.toml').read_text())
+    runtime=runtime_tools(data)
+    record=CONTEXT.parent/'legacy-jobs.json'
+    legacy=' --legacy-record '+runtime+'/legacy-jobs.json --legacy-sha '+hashlib.sha256(record.read_bytes()).hexdigest()
+    template['providers']['codex']['command']=runtime+'/role_bootstrap.py'+legacy
+    template['providers']['codex']['resume_command']=runtime+'/role_bootstrap.py'+legacy+' resume {{.SessionKey}}'
     catalog=Path('//wsl.localhost')/data['distribution']/'home'/data['user']/'.codex/models_cache.json'
     context_options=settings(json.loads(catalog.read_text(encoding='utf-8')))
     for key,value in context_options.items():
@@ -213,14 +218,15 @@ def configure(data):
         'providers.codex.option_defaults': template['providers']['codex']['option_defaults'],
         'providers.codex.env': {'HTTP_PROXY': data.get('http_proxy',''), 'HTTPS_PROXY': data.get('http_proxy',''),
                                 'NO_PROXY': 'localhost,127.0.0.1,::1'},
-        'defaults.rig.imports.gc': template['defaults']['rig']['imports']['gc'],
     }
+    managed['defaults.rig.imports.gc']=template['defaults']['rig']['imports']['gc']
     for section, fields in managed.items():
         for key, value in fields.items():
             text = set_field(text, section, key, value)
     for patch in template.get('patches',{}).get('agent',[]):
         for key,value in patch.items():
             if key not in ('name','rig'):
+                if key=='pre_start':value=[entry.replace('/usr/local/lib/mu-runtime',runtime) for entry in value]
                 text=set_agent_field(text,patch['name'],patch.get('rig',''),key,value)
     parsed = tomllib.loads(text)
     if parsed.get('rigs') != tomllib.loads(original).get('rigs'):
@@ -232,27 +238,77 @@ def configure(data):
                       'worker_capacity': 23, 'registered_rigs_preserved': True}))
 
 
+def legacy_jobs(data):
+    """Capture existing unbound native identities once, before switching providers."""
+    from agent_batch import encoded,namespace,check_namespace
+    import shlex
+    path=CONTEXT.parent/'legacy-jobs.json'
+    config=Path('//wsl.localhost')/data['distribution']/data['city'].lstrip('/')/'city.toml'
+    current=tomllib.loads(config.read_text(encoding='utf-8'))
+    provider=shlex.split(current.get('providers',{}).get('codex',{}).get('command',''))
+    if '--legacy-record' in provider:
+        # The switch already happened. Never widen the retained identities now.
+        if '--legacy-sha' not in provider:raise RuntimeError('Installed legacy binding has no exact hash')
+        expected=provider[provider.index('--legacy-sha')+1]
+        raw=path.read_bytes();saved=json.loads(raw);check_namespace(saved,data)
+        if hashlib.sha256(raw).hexdigest()!=expected:
+            raise RuntimeError('Retained legacy identities differ from the installed provider binding')
+        return raw
+    stores=['city']
+    if any(r.get('name')=='mu-core' for r in current.get('rigs',[])):
+        stores.append('rig:mu-core')
+    sessions=json.loads(subprocess.check_output(command(data,['session','list','--state','all','--json']),
+        text=True,encoding='utf-8',stderr=subprocess.PIPE,creationflags=FLAGS,timeout=60))
+    saved={'namespace':namespace(data),'sessions':[item['id'] for item in sessions['sessions']
+        if 'role_bootstrap.py' not in item.get('command','')
+        and 'role_bootstrap.py' not in item.get('resume_command','')],
+        'tasks':{store:[] for store in stores}}
+    for store in stores:
+        args=['bd',*(['--rig','mu-core'] if store=='rig:mu-core' else []),
+              'list','--all','--json','--limit','10000']
+        output=subprocess.check_output(command(data,args),text=True,encoding='utf-8',
+            stderr=subprocess.PIPE,creationflags=FLAGS,timeout=60)
+        entries=json.loads(output)
+        if len(entries)>=10000:raise RuntimeError('Paginate existing native identities before upgrading provider')
+        for item in entries:
+            meta=item.get('metadata',{})
+            if item.get('issue_type')=='session':continue
+            if not any(key.startswith('mu.launch_') or key in ('mu.role','mu.profile_sha256') for key in meta):
+                saved['tasks'][store].append(item['id'])
+    raw=encoded(saved)+b'\n'
+    # A failed deployment before the provider switch leaves the original path
+    # active. Refresh that pre-switch capture on retry, then retain it once bound.
+    temporary=path.with_suffix('.tmp');temporary.write_bytes(raw);temporary.replace(path)
+    return raw
+
+
 def deploy_tools(data):
-    names=['go_mcp.py','resource_guard.py','worker_context.py','language_policy.py','provision_worker.py','runtime_hooks.py']
+    legacy_jobs(data)
+    names=['legacy-jobs.json','go_mcp.py','resource_guard.py','worker_context.py','language_policy.py','provision_worker.py','runtime_hooks.py',
+           'role_bootstrap.py','role_profiles.py']
     prefix=Path('//wsl.localhost')/data['distribution']
     incoming='/home/'+data['user']+'/bootstrap'
     destination=prefix/incoming.lstrip('/')
     destination.mkdir(parents=True,exist_ok=True)
     hashes={}
     for name in names:
-        source=ROOT/'.agents/scripts'/name
+        source=CONTEXT.parent/name if name=='legacy-jobs.json' else ROOT/'.agents/scripts'/name
         shutil.copyfile(source,destination/name)
         hashes[name]=hashlib.sha256(source.read_bytes()).hexdigest()
+    runtime='/usr/local/lib/mu-runtime/bundles/'+hashlib.sha256(json.dumps(hashes,sort_keys=True).encode()).hexdigest()
     subprocess.run(['wsl.exe','-d',data['distribution'],'-u','root','--exec',
-        'install','-d','-m','755','/usr/local/lib/mu-runtime'],check=True,timeout=15,
+        'install','-d','-m','755',runtime],check=True,timeout=15,
         creationflags=FLAGS)
     subprocess.run(['wsl.exe','-d',data['distribution'],'-u','root','--exec',
-        'install','-m','644',*[incoming+'/'+n for n in names],'/usr/local/lib/mu-runtime/'],
+        'install','-m','644',*[incoming+'/'+n for n in names],runtime+'/'],
         check=True,timeout=15,creationflags=FLAGS)
-    installed=prefix/'usr/local/lib/mu-runtime'
+    subprocess.run(['wsl.exe','-d',data['distribution'],'-u','root','--exec',
+        'chmod','755',runtime+'/role_bootstrap.py'],check=True,timeout=15,
+        creationflags=FLAGS)
+    installed=prefix/runtime.lstrip('/')
     if any(hashlib.sha256((installed/name).read_bytes()).hexdigest()!=hashes[name] for name in names):
         raise RuntimeError('Deployed worker helper bytes differ from the verified input set')
-    (CONTEXT.parent/'deployed-worker-tools.json').write_text(json.dumps(hashes,indent=2)+'\n',encoding='utf-8')
+    (CONTEXT.parent/'deployed-worker-tools.json').write_text(json.dumps({'runtime':runtime,'files':hashes},indent=2)+'\n',encoding='utf-8')
 
 
 def configure_trusted_projects(path, roots):
@@ -275,6 +331,18 @@ def configure_trusted_projects(path, roots):
             handle.write(text)
 
 
+def runtime_tools(data):
+    receipt=json.loads((CONTEXT.parent/'deployed-worker-tools.json').read_text(encoding='utf-8'))
+    runtime=receipt['runtime']
+    if not re.fullmatch(r'/usr/local/lib/mu-runtime/bundles/[0-9a-f]{64}',runtime):
+        raise RuntimeError('Unexpected immutable runtime tooling path; configure current tools')
+    prefix=Path('//wsl.localhost')/data['distribution']/runtime.lstrip('/')
+    if any(hashlib.sha256((prefix/name).read_bytes()).hexdigest()!=sha for name,sha in receipt['files'].items()):
+        raise RuntimeError('Installed immutable runtime tooling changed')
+    return runtime
+
+
+
 def configure_advisers(data):
     from language_policy import WORKER_INSTRUCTIONS
     policy=json.loads((ROOT/'.agents/orchestration/models.json').read_text())
@@ -290,7 +358,10 @@ def configure_advisers(data):
         directory=prefix/data['city'].lstrip('/')/'agents'/spec['target']
         directory.mkdir(parents=True,exist_ok=True)
         (directory/'prompt.template.md').write_text(overlay+'\n\n'+native,encoding='utf-8',newline='\n')
-        config='provider = "codex"\nmax_active_sessions = '+str(spec['max_active'])+'\n'
+        # Native GC overlays run before our bootstrap. Give each concrete slot
+        # its own mutable cwd; never let that overlay rewrite canonical city hooks
+        # or a frozen task snapshot. GC creates these paths as the Linux user.
+        config='provider = "codex"\nwork_dir = ".gc/mu-advisers/{{.AgentBase}}"\nmax_active_sessions = '+str(spec['max_active'])+'\n'
         config+='[option_defaults]\nmodel = '+json.dumps(spec['model'])+'\neffort = '+json.dumps(spec['effort'])+'\n'
         (directory/'agent.toml').write_text(config,encoding='utf-8',newline='\n')
     user_config=prefix/'home'/data['user']/'.codex/config.toml'
@@ -306,17 +377,18 @@ def check_models(data):
 
 def trust_city_hooks(data):
     checked=subprocess.run(['wsl.exe','-d',data['distribution'],'-u',data['user'],'--exec','python3',
-        '/usr/local/lib/mu-runtime/runtime_hooks.py','--root',data['city']],capture_output=True,
+        runtime_tools(data)+'/runtime_hooks.py','--root',data['city']],capture_output=True,
         timeout=60,creationflags=FLAGS)
     if checked.returncode:
         raise RuntimeError('Reviewed hook preparation failed: '+checked.stderr.decode('utf-8',errors='replace').strip())
 
 
 def dispatch(data, path):
-    from model_router import select_route
-    from language_policy import WORKER_INSTRUCTIONS
+    from model_router import resolve_assignment
+    from agent_batch import (snapshot,planned_jobs,enqueue,Native,STATE,save,lock,digest,encoded,
+        namespace,check_namespace,verify_copy)
     task=json.loads(Path(path).read_text(encoding='utf-8'))
-    route=select_route(task)
+    route=resolve_assignment(task,root=ROOT)
     if route['action']!='DISPATCH':
         print(json.dumps(route));return 0
     title=task.get('title','').strip();body=task.get('body','').strip()
@@ -324,14 +396,42 @@ def dispatch(data, path):
         raise ValueError('External agents cannot read Windows paths; use batch sources for verified input delivery')
     if not title or '\n' in title or len(title)>450 or not body:
         raise ValueError('A task packet needs a one-line title and scoped body')
-    payload=title+'\n\n'+WORKER_INSTRUCTIONS+'\n\n'+body+'\n\nRouting/handoff evidence:\n'+json.dumps({
-        k:v for k,v in task.items() if k not in ('title','body')},ensure_ascii=False)
-    result=subprocess.run(command(data,['sling',route['target'],'--stdin','--no-formula','--no-convoy','--json']),
-        input=payload.encode('utf-8'),capture_output=True,timeout=120,creationflags=FLAGS)
-    sys.stderr.write(result.stderr.decode('utf-8',errors='replace'))
-    if result.returncode:
-        sys.stdout.write(result.stdout.decode('utf-8',errors='replace'));return result.returncode
-    print(json.dumps({'routing':route,'dispatch':json.loads(result.stdout)}))
+    if task['kind']=='implement':
+        missing=[key for key in ('base','write_set','acceptance','validation','stop_conditions') if not task.get(key)]
+        if missing:raise ValueError('Implementation packet requires '+', '.join(missing))
+        from agent_batch import relative
+        if not isinstance(task['write_set'],list):raise ValueError('Implementation write_set must name exact relative paths')
+        for owned in task['write_set']:
+            relative(owned)
+            if owned=='.' or any(char in owned for char in '*?['):raise ValueError('Implementation write_set must name exact relative paths')
+    identity='single-'+digest(encoded(task))[:24]
+    packet={'batch_id':identity,'sources':task.get('sources',{}),
+        'jobs':[{**task,'key':'task','inputs':list(task.get('sources',{}))}]}
+    # Same immutable native IDs and reconciliation as batches. A timed-out create
+    # or sling is never retried under another identity.
+    STATE.mkdir(parents=True,exist_ok=True)
+    record=STATE/(identity+'.json')
+    with lock(STATE/(identity+'.lock')):
+        if record.exists():
+            state=json.loads(record.read_text(encoding='utf-8'));check_namespace(state,data)
+            if state['packet_hash']!=digest(encoded(packet)):raise ValueError('Dispatch identity owns another packet')
+            directory=Path('//wsl.localhost')/data['distribution']/state['evidence']['linux'].lstrip('/')
+            verify_copy(directory,state['evidence']['files'])
+            if digest((directory/'manifest.json').read_bytes())!=state['evidence']['manifest_sha256']:
+                raise RuntimeError('Dispatch snapshot manifest changed')
+        else:
+            evidence=snapshot(data,packet)
+            if task['kind']=='implement':
+                active=Path('//wsl.localhost')/data['distribution']/data['rig_root'].lstrip('/')/'.local/workspace/dispatch.json'
+                wave=json.loads(active.read_text(encoding='utf-8'))
+                if task['base']!=wave['source_head'] or evidence['source_head']!=wave['source_head']:
+                    raise RuntimeError('Implementation base differs from prepared worker source; prepare current idle wave')
+            state={'batch_id':identity,'namespace':namespace(data),'packet_hash':digest(encoded(packet)),
+                   'evidence':evidence,'jobs':planned_jobs(packet,evidence)}
+            save(record,state)
+        enqueue(state,Native(data,command),lambda:save(record,state))
+    print(json.dumps({'routing':state['jobs'][0]['route'],'dispatch':
+        {k:state['jobs'][0][k] for k in ('id','phase','metadata')},'receipt':str(record)}))
     return 0
 
 
@@ -385,14 +485,14 @@ def prepare(data):
         return r.stdout.strip()
     sessions=json.loads(linux(['/usr/local/bin/gc','--city',data['city'],'session','list','--json']))
     if any(s.get('template','').startswith('mu-core/') and not s.get('closed') for s in sessions['sessions']):
-        raise RuntimeError('Finish/reconcile current MU workers before preparing another source wave')
+        raise RuntimeError('Finish/reconcile current workers before preparing another source wave')
     jobs=json.loads(linux(['/usr/local/bin/gc','--city',data['city'],'bd','--rig','mu-core',
                           'list','--all','--json','--limit','10000']))
     if any(j['status']!='closed' and j.get('metadata',{}).get('gc.routed_to','').startswith('mu-core/') for j in jobs):
-        raise RuntimeError('Pending MU work still belongs to the current source wave')
-    source_paths=['app','common','core','features','infra','main','measurement','proxy','testing','transport','go.mod','go.sum','go.work','go.work.sum']
-    if workspace.git('status','--porcelain','--untracked-files=all','--',*source_paths):
-        raise RuntimeError('Commit the selected source input before dispatching a new wave')
+        raise RuntimeError('Pending worker work still belongs to the current source wave')
+    # Only committed HEAD is transferred. Report dirty inputs excluded from that
+    # source identity without modifying them or blocking independent work.
+    excluded=workspace.git('status','--porcelain','--untracked-files=all').splitlines()
     head=workspace.git('rev-parse','HEAD')
     if len(jobs)>=10000:
         raise RuntimeError('Task listing is bounded; reconcile pagination before preparing a wave')
@@ -400,7 +500,7 @@ def prepare(data):
     destination=prefix/data['rig_root'].lstrip('/')/'.local/workspace/dispatch.json'
     existing=reusable_wave(CONTEXT.parent/'waves',jobs,head,destination)
     if existing:
-        print(json.dumps({'prepared':True,'reused':True,**existing}))
+        print(json.dumps({'prepared':True,'reused':True,**existing,'excluded_worktree_status':excluded}))
         return
     branch=workspace.policy()['expected_branch']
     bundle=CONTEXT.parent/('input-'+head+'.bundle')
@@ -428,7 +528,7 @@ def prepare(data):
         raise RuntimeError('Unexpected persisted wave identifier')
     workroot=data['worktree_base']+'/'+wave
     manifest={'source_head':head,'queue_origin':queue,'analysis_tools':data['analysis_tools'],
-              'capacity':23,'generation':wave,'wave_bead':wave,'worktree_root':workroot,'city':data['city']}
+              'capacity':23,'generation':wave,'wave_bead':wave,'worktree_root':workroot,'city':data['city'],'excluded_worktree_status':excluded}
     config=prefix/data['city'].lstrip('/')/'city.toml'
     text=config.read_text(encoding='utf-8')
     if not any(r.get('name')=='mu-core' for r in tomllib.loads(text).get('rigs',[])):
@@ -438,6 +538,8 @@ def prepare(data):
     maintained=tomllib.loads((ROOT/'.agents/orchestration/city.toml').read_text())
     pre_start=next(p['pre_start'] for p in maintained['patches']['agent']
                    if p['name']=='codex' and p.get('rig')=='mu-core')
+    runtime=runtime_tools(data)
+    pre_start=[entry.replace('/usr/local/lib/mu-runtime',runtime) for entry in pre_start]
     rendered=set_agent_field(rendered,'codex','mu-core','pre_start',pre_start)
     tomllib.loads(rendered)
     # Persist an explicit native issue ID BEFORE creation, so an interrupted
@@ -453,7 +555,7 @@ def prepare(data):
     # GC renders hooks into work_dir before pre_start. A native Git worktree must
     # therefore exist BEFORE the new pool path is admitted into city config.
     for slot in range(1,manifest['capacity']+1):
-        linux(['python3','/usr/local/lib/mu-runtime/provision_worker.py',
+        linux(['python3',runtime+'/provision_worker.py',
             '--rig-root',rig,'--work-dir',workroot+'/codex-'+str(slot),
             '--slot','codex-'+str(slot)],timeout=120)
     config.write_text(rendered,encoding='utf-8',newline='\n')
@@ -462,8 +564,7 @@ def prepare(data):
     (receipts/(wave+'.json')).write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
     pending.unlink()
     print(json.dumps({'prepared':True,'source_head':head,'wave':wave,'capacity':23,
-                      'worktree_root':workroot,'reload':reload_outcome,
-                      'provisioning':'native gc worktree ensure before pool admission; pre_start revalidates'}))
+                      'worktree_root':workroot,'excluded_worktree_status':excluded,'reload':reload_outcome,'provisioning':'native gc worktree ensure before pool admission; pre_start revalidates'}))
 
 
 def main():
@@ -506,8 +607,8 @@ def main():
             if not re.search(r'(?<![0-9.])'+re.escape(expected)+r'(?![0-9.\w-])',checked):
                 raise RuntimeError(name+' version differs from runtime-lock: '+checked)
     if args.action == 'configure':
-        configure(data)
         deploy_tools(data)
+        configure(data)
         configure_advisers(data)
         check_models(data)
         trust_city_hooks(data)

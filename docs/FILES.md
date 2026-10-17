@@ -140,7 +140,9 @@ These maintained Python files live in `.agents/scripts/`. Some are commands, oth
 
 - [workspace.py](../.agents/scripts/workspace.py): `setup` generates ignored context/config; `verify` checks root/branch/baseline/settings/roles/catalog; `validate` checks skill/role policy without source startup. Used by startup/session/external preparation.
 - [check_core.py](../.agents/scripts/check_core.py): read-only startup combines workspace verification, accounting and dirty paths. Run after setup; no fetch/build/indexing.
-- [session.py](../.agents/scripts/session.py): verifies checkout and starts guarded Codex with explicit generated settings/absolute role paths; use for a fresh session after changes.
+- [session.py](../.agents/scripts/session.py): verifies checkout/worker marker, lists maintained profiles, and applies an explicitly selected role through `--role`, `--task` and `--exec`; ordinary no-role sessions retain parent settings.
+- [role_profiles.py](../.agents/scripts/role_profiles.py): reads actual maintained profile descriptions/instructions/hashes, validates model/effort/reductions, parses TOML override roots and emits competency settings.
+- [role_bootstrap.py](../.agents/scripts/role_bootstrap.py): trigger/store/claim validation, native-session trigger recovery, immutable job re-exec including resume, retained generic legacy identities, mode-specific cwd/MCP, and invocation-scoped project/hook trust before the guarded model process.
 - [local_environment.py](../.agents/scripts/local_environment.py): imported context loader/bounded Git wrapper used by analysis; refuses absent/wrong-root context instead of borrowing another project.
 - [context_policy.py](../.agents/scripts/context_policy.py): policy reader/catalog checker/TOML generator imported by workspace/external configuration.
 - [language_policy.py](../.agents/scripts/language_policy.py): maintained primary/worker strings imported by workspace/worker context/dispatch/overlays; English internal reports and Russian primary human replies.
@@ -172,10 +174,10 @@ These maintained Python files live in `.agents/scripts/`. Some are commands, oth
 - [model_router.py](../.agents/scripts/model_router.py): imported route selector/resolved-config validator; dispatch/batch use explicit policy, bounded lookup and evidenced escalation.
 - [agent_batch.py](../.agents/scripts/agent_batch.py): imported capture/hash verification/admission/replay for selected worktree bytes/Git blobs; submits ready native jobs and resumes identical IDs without duplicates.
 - [worker_context.py](../.agents/scripts/worker_context.py): command/imported isolated setup checks base/sole local-queue origin and writes worker context/Go/public Context7/grep.app/two-tool Exa config without nesting. Re-runs overwrite worker host files; never use on integrator checkout.
-- [provision_worker.py](../.agents/scripts/provision_worker.py): Linux pre-start hook verifies manifest/slot, invokes native pinned worktree provisioning, generates context and trusts reviewed city-bound hooks.
-- [runtime_hooks.py](../.agents/scripts/runtime_hooks.py): Linux configure/pre-start helper creates/checks four reviewed hooks, verifies native inventory/fingerprints and persists trust via native Codex API. Changed/extra hooks block setup; ordinary host setup does not call it.
+- [provision_worker.py](../.agents/scripts/provision_worker.py): Linux pre-start hook verifies manifest/slot, invokes native pinned worktree provisioning, generates isolated context; per-job hook trust belongs to the frozen bootstrap invocation.
+- [runtime_hooks.py](../.agents/scripts/runtime_hooks.py): Linux configure helper creates/checks four reviewed hooks, verifies native inventory/fingerprints and persists trust via native Codex API. Changed/extra hooks block setup; ordinary host setup does not call it.
 
-External configure deploys `go_mcp.py`, `resource_guard.py`, `worker_context.py`, `language_policy.py`, `provision_worker.py` and `runtime_hooks.py` into Linux and verifies hashes. These are explicit refreshed copies, not links back here. Maintained adapters expect `/usr/local/bin` commands and `/usr/local/lib/mu-runtime` helpers; changing that layout requires coordinated code/template changes, not only editing an example host path.
+External configure deploys `go_mcp.py`, `resource_guard.py`, `worker_context.py`, `language_policy.py`, `provision_worker.py`, `runtime_hooks.py`, `role_profiles.py` and `role_bootstrap.py` into hash-addressed Linux bundles and verifies hashes. Active jobs retain pinned helpers. Maintained adapters expect `/usr/local/bin` commands and `/usr/local/lib/mu-runtime/bundles/<sha256>` helpers; changing that layout requires coordinated code/template changes, not only editing an example host path.
 
 ## Regression tests
 
@@ -184,6 +186,10 @@ These maintained synthetic toolkit checks run through `unittest` discovery; they
 The twenty `.agents/scripts/test_*.py` modules are:
 
 - [test_agent_batch.py](../.agents/scripts/test_agent_batch.py): input bounds, frozen hashes, native admission/replay.
+- [test_role_profiles.py](../.agents/scripts/test_role_profiles.py): actual catalog bytes/settings, unsupported profiles and preserved unmanaged extras.
+- [test_session.py](../.agents/scripts/test_session.py): guarded CLI role/exec construction, exact worker validation, override rejection and ordinary parent preservation.
+- [test_role_bootstrap.py](../.agents/scripts/test_role_bootstrap.py): frozen profile/helper/skill inputs, pre-run mode/root/MCP/trust, store-aware claiming, resume retention and negative controls.
+
 - [test_agent_workflow.py](../.agents/scripts/test_agent_workflow.py): expanded role/skill discovery, generation, session paths, progressive references, policy rejection and existing external routes.
 - [test_analysis_helpers.py](../.agents/scripts/test_analysis_helpers.py): helper chain/profiles/parsing/normalization/probe failures.
 - [test_context_diagnostics.py](../.agents/scripts/test_context_diagnostics.py): bounded accounting extraction/redaction.
@@ -230,7 +236,7 @@ These are not bundled maintained source. Keep them untracked; never package acco
 - `.codex/config.toml`: generated primary settings referencing roles/scripts. Setup refuses tracked/aliased files, unrelated existing config and locally edited generated bytes. Save/reconcile edits before regeneration; customize maintained inputs. Fresh sessions load changes.
 - `.local/workspace/orchestration.json`: init-context writes explicit WSL connection/root and refuses an existing connection; orchestration reads it. Connection changes need deliberate store review.
 - `.local/workspace/worker.json`, worker `context.json`/`.codex/config.toml`: isolated base/queue config consumed by workers/Go adapter; pre-start refreshes from prepared wave. Durable customization belongs in inputs/task packets.
-- `.local/workspace/dispatch.json`, wave/batch receipts/input manifests, `deployed-worker-tools.json`, `city-before-configure.toml`, `orchestration-keepalive.json`: preparation/provenance/recovery/process state. Preserve failures; use status/replay/recovery instead of editing JSON to claim success.
+- `.local/workspace/dispatch.json`, wave/batch receipts/input manifests, `deployed-worker-tools.json`, `legacy-jobs.json`, `city-before-configure.toml`, `orchestration-keepalive.json`: preparation/provenance/recovery/process state. Preserve failures; use status/replay/recovery instead of editing JSON to claim success.
 - `.local/analysis/` and checkout-scoped analysis caches: maps/raw MCP/AST/symbol evidence, graph snapshots/indexes/registries/manifests/leases; freshness checks and humans read them. Refresh through analysis commands. Durable evidence stays outside transient scratch.
 - `.local/host/transient/run-*`: disposable marked TEMP/TMP/GOTMPDIR owned by guard; recover with `resource_guard.py --clean`. Shared caches/other sessions/unmarked global TEMP are not cleanup targets.
 - `.local/dist/`: optional packaged ZIP; package command refuses existing output, so select a new path.

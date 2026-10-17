@@ -8,7 +8,8 @@ import tempfile
 import tomllib
 import unittest
 from unittest.mock import patch
-from types import SimpleNamespace
+from test_agent_batch import FakeNative
+from model_router import select_route
 
 import agent_batch
 import orchestration
@@ -72,13 +73,20 @@ class LanguageInheritanceTests(unittest.TestCase):
         self.assertIn('status: DONE', job['body'])
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory)/'task.json'; path.write_text(json.dumps(task))
-            result = SimpleNamespace(returncode=0, stderr=b'', stdout=b'{"id":"fixture"}')
-            with patch.object(orchestration.subprocess, 'run', return_value=result) as invoke, \
+            route={**select_route(task),'context_root':'/frozen/.local/workspace','skills_root':'/frozen/.agents/skills'}
+            evidence={'linux':'/frozen','source_head':'a'*40,'files':{},'manifest_sha256':'b'*64,
+                'launches':{'task':{'path':'/frozen/launch.json','sha256':'c'*64,'assignment':route}}}
+            native=FakeNative()
+            with patch.object(agent_batch,'STATE',Path(directory)/'state'), \
+                    patch.object(agent_batch,'snapshot',return_value=evidence), \
+                    patch.object(agent_batch,'Native',return_value=native), \
                     contextlib.redirect_stdout(io.StringIO()):
                 orchestration.dispatch({'distribution': 'fixture', 'user': 'fixture', 'city': '/city'}, path)
-            sent = invoke.call_args.kwargs['input'].decode()
+            sent = next(iter(native.items.values()))['description']
             self.assertIn(WORKER_INSTRUCTIONS, sent)
             self.assertIn(body, sent)
+            self.assertIn('status: DONE', sent)
+            self.assertEqual([call[0] for call in native.calls],['bd','sling'])
 
 
 if __name__ == '__main__':

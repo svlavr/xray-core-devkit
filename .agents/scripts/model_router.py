@@ -5,8 +5,12 @@ from pathlib import Path
 POLICY = Path(__file__).resolve().parents[1] / 'orchestration/models.json'
 
 
-def select_route(task):
-    policy=json.loads(POLICY.read_text())
+def resolve_assignment(task, root=None):
+    from role_profiles import load_profile
+    policy_path = Path(root) / '.agents/orchestration/models.json' if root is not None else POLICY
+    policy=json.loads(policy_path.read_text(encoding='utf-8'))
+    # Resolve before even returning NEEDS_CONTEXT so unknown identities never pass admission.
+    profile=load_profile(task['role'], root) if 'role' in task else None
     kind=task.get('kind')
     if kind not in ('explore','implement','review','deep'):
         raise ValueError('Choose a work kind: explore, implement, review, or deep')
@@ -16,17 +20,29 @@ def select_route(task):
     unresolved=task.get('blocker')=='unresolved_technical'
     if previous=='gpt-6-astra' and unresolved:
         return {'action':'NEEDS_CONTEXT','reason':'Astra already examined this discriminator; obtain new evidence instead of repeating it'}
-    if kind=='deep' or (previous=='gpt-6.1-sol' and unresolved):
+    if (profile and profile['role']=='mu_deep_reviewer') or kind=='deep' or (previous=='gpt-6.1-sol' and unresolved):
         if not unresolved or previous!='gpt-6.1-sol' or not task.get('discriminator') or not task.get('evidence'):
             raise ValueError('Astra requires a named unresolved discriminator and evidence from a Sol 6.1 attempt')
+        if profile and profile['role']!='mu_deep_reviewer':
+            raise ValueError('Select mu_deep_reviewer explicitly for a named-role Astra escalation')
         route='deep'
+    elif profile:
+        if profile['model']==policy['explore']['model']:
+            route='explore'
+        else:
+            route='implement' if kind=='implement' else 'review'
     elif kind=='explore' and task.get('bounded') is True and not task.get('cross_owner') and not unresolved:
         route='explore'
     elif kind=='implement':
         route='implement'
     else:
         route='review'
-    return {'action':'DISPATCH','route':route,**policy[route]}
+    return {'action':'DISPATCH','route':route,**policy[route],**(profile or {})}
+
+
+def select_route(task, root=None):
+    """Compatibility entrypoint; no-role callers retain their generic kind policy."""
+    return resolve_assignment(task, root)
 
 
 def validate_models(config):

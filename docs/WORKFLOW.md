@@ -210,6 +210,27 @@ release boundaries. Findings need a realistic trigger, consequence and exact
 source location. Main resolves findings before accepting the slice. A DONE
 advisory result means its answer is complete, not that implementation is approved.
 
+## Executing the selected competency
+
+Select a role from `session.py --list-roles`, then use the advertised native
+custom type when available. A stale session can execute that profile with
+`session.py --role mu_investigator --exec ...`; this is CLI profile execution,
+not proof of native custom-type admission. External `dispatch` and `batch` JSON
+accept `role` and optional selected `skills`. Main selects on the actual role
+description, never a task-title keyword classifier. Profile instructions, model
+and effort reach the process before it starts; generic no-role routing makes
+no specialist claim. Preserve the user's normal parent model.
+
+External advisories start in their frozen tooling root with public retrieval and
+explicit source-alias directories, without an invented Go workspace. Implementation
+starts in the prepared isolated source checkout and explicitly binds its Go MCP
+to that actual root using frozen adapter bytes. The ignored worker marker pins
+the exact source base/local queue; it does not grant publication authority.
+Only an explicitly authorized external worker may stage exact owned paths and
+create a local handoff commit there. Native children never mutate Git. Main
+reviews, integrates, validates and applies the user's exact checkpoint policy.
+The toolkit supplies no private checkpoint destination or automatic push policy.
+
 ## Source-size accounting
 
 Use the local offline counter `.agents/scripts/source_size.py` and the reviewed
@@ -272,8 +293,9 @@ review and validation, then perform that policy without repeatedly requesting
 routine permission. Otherwise deliver the reviewed result and precise local
 state; ask only when an additional Git action is required and unapproved.
 
-Only main stages/integrates/publishes. Inspect exact owned index bytes and dirty
-overlap. Use hidden bounded sequential Git with maintenance disabled; non-force
+Only main stages the integrated checkpoint and integrates/publishes. An explicitly
+authorized isolated external worker may stage its owned local handoff commit.
+Inspect exact owned index bytes and dirty overlap. Use hidden bounded sequential Git with maintenance disabled; non-force
 push to the explicit authorized remote/ref only. Verify the observed remote SHA
 with `.agents/scripts/remote_evidence.py`; unavailable or mismatching proof is
 not PUBLISHED. Report `PUBLISHED`, `LOCAL_ONLY` or `NO_CHECKPOINT` with reason.

@@ -85,6 +85,33 @@ they are outside this tooling payload. Accumulated project-specific core tests
 are not imported by this distribution. Tooling tests, source/host, Android,
 network, performance and release acceptance remain separate.
 
+## Selected-role regression scope
+
+For execution/profile changes, run the focused `test_role_profiles`,
+`test_session`, `test_role_bootstrap`, `test_agent_batch`, `test_model_router`,
+`test_orchestration`, `test_runtime_hooks`, `test_worker_context`,
+`test_workspace` and `test_agent_workflow` modules through resource_guard with
+bounded durable logs. The catalog/session/bootstrap tests also run in the
+standalone DevKit; fixture sources synthesize the required official module path
+without running source setup in this root. Retain installed-source tests for
+actual host-context-dependent adapters.
+
+Verify managed-extra behavior in a disposable installed copy: preserve an
+owner-created role, skill and instructions through install/update and validate;
+list only the nineteen maintained profiles. Freeze public PROJECT_SCOPE and
+WORKFLOW documents and explicit non-xray skill packages, not private project
+authority. Test quoted/dotted overrides and Unicode paths, immutable resumes,
+actual worker MCP root, city-versus-rig operations and invocation-only trust.
+Cover bound resume without trigger environment, one-time retained legacy
+identities, unchanged generic legacy argv/cwd and rejection of new/partial
+unbound jobs. Preserve old records and closed results.
+All-catalog construction/hash checks prove input availability and selection,
+not execution of every model or every live role. Stubbed Codex/GC process tests
+are identified as such. Final package/install/update and native config/root
+checks must use the final exact extracted bytes; any authenticated model run is
+a separate explicitly selected gate. No source checkpoint destination is supplied
+by the DevKit; that policy remains user-owned.
+
 ## Review public contents and package
 
 Review exact changed source, settings, docs and dependency licenses first.

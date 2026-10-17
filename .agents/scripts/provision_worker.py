@@ -5,7 +5,6 @@ from pathlib import Path
 import re
 import subprocess
 from worker_context import setup
-from runtime_hooks import trust
 
 
 def provision(rig, workdir, slot):
@@ -31,8 +30,7 @@ def provision(rig, workdir, slot):
         raise RuntimeError(result.stderr.strip() or result.stdout.strip())
     native=json.loads(result.stdout)
     configured=setup(workdir,manifest['source_head'],manifest['queue_origin'],Path(manifest['analysis_tools']))
-    hooks=trust(workdir,Path(manifest['city']))
-    print(json.dumps({'native_worktree':native,'worker_context':configured,'reviewed_hooks':hooks}))
+    print(json.dumps({'native_worktree':native,'worker_context':configured}))
 
 
 if __name__=='__main__':

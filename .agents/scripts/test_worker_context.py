@@ -11,6 +11,7 @@ import json
 import tomllib
 from mcp_backend import Backend
 from unittest.mock import patch
+import workspace
 import worker_context
 
 
@@ -88,7 +89,7 @@ class WorkerGuardTests(unittest.TestCase):
             try:
                 response=backend.call({'jsonrpc':'2.0','id':2,'method':'tools/call','params':{'name':'go_workspace','arguments':{}}})
                 self.assertNotIn('error',response)
-                self.assertIn(str(root),json.dumps(response).replace('\\\\','\\'))
+                self.assertTrue(any(str(root) in item.get('text','') for item in response.get('result',{}).get('content',[])))
                 self.assertTrue(list((root/'.local/host/transient').glob('run-*/owner.json')))
                 self.assertFalse((base/'installed/.local').exists())
             finally:backend.close()
@@ -126,6 +127,72 @@ class WorkerGuardTests(unittest.TestCase):
                 with self.assertRaisesRegex((SystemExit,RuntimeError),'requires gopls v0.23.0'):
                     runpy.run_path(str(script),run_name='__main__')
                 spawn.assert_not_called()
+
+
+    def test_explicit_mcp_layer_keeps_frozen_adapter_and_actual_source_root(self):
+        config={'developer_instructions':'already combined','approval_policy':'never','sandbox_mode':'read-only',
+            'mcp_servers':{'xray_gopls_worker':{'enabled':True,'command':'/usr/bin/python3',
+                'args':['/frozen/.agents/scripts/go_mcp.py','--binary','/tools-'+chr(0x1f680)+'/gopls','--root','/worker-'+chr(0x1f680)],
+                'env':{'GOOS':'linux','GOFLAGS':'-mod=readonly'}},
+                'server.with.dot':{'enabled':False}}}
+        args=worker_context.scoped_mcp_args(config)
+        overrides=[args[index+1] for index,item in enumerate(args) if item=='-c']
+        self.assertTrue(all(value.startswith('mcp_servers.') for value in overrides))
+        self.assertIn('mcp_servers.xray_gopls_worker.enabled=true',overrides)
+        self.assertIn('mcp_servers."server.with.dot".enabled=false',overrides)
+        effective=tomllib.loads('\n'.join(args[index+1] for index,item in enumerate(args) if item=='-c'))
+        self.assertEqual(effective,{'mcp_servers':config['mcp_servers']})
+        self.assertEqual(effective['mcp_servers']['xray_gopls_worker']['args'],config['mcp_servers']['xray_gopls_worker']['args'])
+
+
+    def test_qualified_public_research_preserves_worker_root_and_parent_permissions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory).resolve();repo=root/'worker root';repo.mkdir()
+            queue=root/'local queue';queue.mkdir()
+            tools=root/'worker tools';(tools/'bin').mkdir(parents=True)
+            binary=tools/'bin'/('gopls.exe' if os.name=='nt' else 'gopls')
+            binary.write_bytes(b'fixture tool')
+            (repo/'go.mod').write_text('module github.com/xtls/xray-core\n')
+            def git(command,**kwargs):
+                self.assertEqual(command[command.index('-C')+1],str(repo))
+                args=command[command.index('-C')+2:]
+                if args==['rev-parse','--show-toplevel']:return str(repo)
+                if args[:2]==['remote','get-url']:return str(queue)
+                if args==['remote']:return 'origin'
+                if args==['rev-parse','base^{commit}']:return 'a'*40
+                return ''
+            with patch.object(worker_context.subprocess,'check_output',side_effect=git):
+                result=worker_context.setup(repo,'base',str(queue),tools)
+            self.assertEqual(result['root'],str(repo))
+            context=json.loads((repo/'.local/workspace/context.json').read_text())
+            marker=json.loads((repo/'.local/workspace/worker.json').read_text())
+            self.assertEqual(context['core'],str(repo))
+            self.assertEqual(context['analysis_tools'],str(tools))
+            self.assertEqual(context['source_base'],marker['base'])
+            self.assertEqual(marker,{'base':'a'*40,'repo':str(repo),'queue_origin':str(queue)})
+            config=tomllib.loads((repo/'.codex/config.toml').read_text(encoding='utf-8'))
+            guidance=config['developer_instructions']
+            for constraint in (
+                'Remote Context7, grep.app and exa_public_research receive public identifiers/questions/URLs only;',
+                'never send private source, contracts, credentials or logs.',
+                'Exa web_search_exa requires query and objective',
+                'web_fetch_exa takes urls',
+                'model-generated summaries and search results do not prove tested behavior or implementation completeness.',
+                'Do not invoke research agents or nested workers;',
+                'return deciding evidence and explicit unknowns to the coordinator.'):
+                self.assertIn(constraint,guidance)
+            self.assertEqual(config['mcp_servers']['exa_public_research'],{
+                'enabled':True,'url':'https://mcp.exa.ai/mcp?tools=web_search_exa,web_fetch_exa',
+                'enabled_tools':['web_search_exa','web_fetch_exa'],
+                'startup_timeout_sec':45,'tool_timeout_sec':45})
+            self.assertEqual(config['mcp_servers']['xray_gopls_worker']['args'],[
+                str(Path(worker_context.__file__).with_name('go_mcp.py').resolve()),
+                '--binary',str(binary),'--root',str(repo)])
+            self.assertFalse(config['agents']['enabled'])
+            for key in ('model','model_reasoning_effort','approval_policy','sandbox_mode'):
+                self.assertNotIn(key,config)
+            self.assertNotIn('exa_public_research',tomllib.loads(workspace.configuration('python'))['mcp_servers'])
+
 
 
 if __name__=='__main__':

@@ -1,12 +1,65 @@
-"""Generate isolated worker host context with a local queue and no publication authority."""
+"""Generate isolated worker host context without weakening the primary guard."""
 import argparse
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
 from language_policy import WORKER_INSTRUCTIONS
+
+
+def scoped_mcp_args(config):
+    """Pass the generated worker MCP layer even when ignored project config is skipped."""
+    result=[]
+    def component(value):
+        # Codex's override parser requires an unquoted top-level root. Keep all
+        # ordinary TOML identifiers plain; quote only names containing dots etc.
+        return value if re.fullmatch(r'[A-Za-z0-9_-]+',value) else json.dumps(value,ensure_ascii=False)
+    def flatten(value,path):
+        for name,item in value.items():
+            keys=(*path,name)
+            if isinstance(item,dict):flatten(item,keys)
+            else:result.extend(('-c','.'.join(component(key) for key in keys)+'='+json.dumps(item,ensure_ascii=False)))
+    flatten(config.get('mcp_servers',{}),('mcp_servers',))
+    return result
+
+
+def adviser_configuration(root, source_head, sources):
+    """Read-only evidence roots use public retrieval without an invented Go workspace."""
+    guidance = (WORKER_INSTRUCTIONS + '\nThis is a frozen external advisory input bundle. '
+        'No source edits, Git writes, publication or nested workers. '
+        'Remote Context7, grep.app and exa_public_research receive public identifiers/questions/URLs only; '
+        'never send private source, contracts, credentials or logs. '
+        'Use original sources and distinguish unavailable evidence from a successful check. '
+        'Return your result only on the assigned native bead. Source HEAD: ' + source_head +
+        '. Assigned source directories: ' + ', '.join(sources))
+    return ('developer_instructions = ' + json.dumps(guidance,ensure_ascii=False) + '\n[agents]\nenabled = false\n' +
+        public_research_config())
+
+
+def public_research_config():
+    return '''
+[mcp_servers.context7]
+enabled = true
+url = "https://mcp.context7.com/mcp"
+startup_timeout_sec = 60
+tool_timeout_sec = 60
+[mcp_servers.grep_app]
+enabled = true
+default_tools_approval_mode = "auto"
+url = "https://mcp.grep.app"
+enabled_tools = ["searchGitHub"]
+startup_timeout_sec = 60
+tool_timeout_sec = 60
+[mcp_servers.exa_public_research]
+enabled = true
+url = "https://mcp.exa.ai/mcp?tools=web_search_exa,web_fetch_exa"
+enabled_tools = ["web_search_exa", "web_fetch_exa"]
+startup_timeout_sec = 45
+tool_timeout_sec = 45
+'''
 
 
 def setup(repo, base, queue_origin, tools):
@@ -24,7 +77,7 @@ def setup(repo, base, queue_origin, tools):
         raise RuntimeError('Worker must exchange commits only with its local queue')
     if git('remote').splitlines() != ['origin']:
         raise RuntimeError('Worker has additional remotes; owner review required')
-    if 'module github.com/xtls/xray-core' not in (repo/'go.mod').read_text():
+    if not re.search(r'^module\s+github\.com/xtls/xray-core\s*$', (repo/'go.mod').read_text(encoding='utf-8'), re.M):
         raise RuntimeError('Wrong worker module')
     base_sha = git('rev-parse', base+'^{commit}')
     git('merge-base','--is-ancestor',base_sha,'HEAD')
@@ -52,24 +105,24 @@ def setup(repo, base, queue_origin, tools):
     args=[str(adapter),'--binary',str(binary),'--root',str(repo)]
     guidance=(WORKER_INSTRUCTIONS + '\n\nThis is an owner-prepared isolated Xray Core worker copy. '
         'Read .local/workspace/worker.json for its exact base/local queue. '
-        'Read docs/PROJECT_SCOPE.md for the project scope and accepted contracts. The integration and publication guards belong to the integrator. '
+        'Read docs/PROJECT_SCOPE.md for the owner-selected scope and accepted contracts. The integration and publication guards belong to the integrator. '
         'Verify actual go_workspace against this working root. Follow the dispatched owned paths; '
         'local worker commits are handoff artifacts, never publish to GitHub or spawn nested workers. '
         'Run validation through the deployed resource_guard.py with --cwd pointing to this checkout '
         'and --transient pointing to its .local/host/transient, followed by -- and the command. '
         'Keep logs and output artifacts outside that disposable scratch; preserve shared Go caches. '
         'Remote Context7, grep.app and exa_public_research receive public identifiers/questions/URLs only; '
-        'never send private source, contracts, credentials or logs. Exa web_search_exa requires query and objective; '
-        'web_fetch_exa takes urls. The two-tool Exa profile adds no model execution or permission authority; '
-        'actual access follows the parent session permissions and approvals.')
+        'never send private source, contracts, credentials or logs. '
+        'Exa web_search_exa requires query and objective; web_fetch_exa takes urls. The two-tool Exa profile adds no model execution or permission authority; actual access follows the parent session permissions and approvals. '
+        'Use retrieved original sources as evidence; model-generated summaries and search results do not prove '
+        'tested behavior or implementation completeness. Do not invoke research agents or nested workers; '
+        'return deciding evidence and explicit unknowns to the coordinator.')
     config='developer_instructions = '+json.dumps(guidance,ensure_ascii=False)+'\n\n[agents]\nenabled = false\n\n[mcp_servers.xray_gopls_worker]\nenabled = true\n'
     config+='command = '+json.dumps(sys.executable,ensure_ascii=False)+'\nargs = '+json.dumps(args,ensure_ascii=False)+'\n'
     config+='startup_timeout_sec = 60\ntool_timeout_sec = 240\n'
     config+='enabled_tools = ["go_workspace", "go_search", "go_file_context", "go_package_api", "go_symbol_references", "go_diagnostics"]\n'
-    config+='[mcp_servers.xray_gopls_worker.env]\nGOOS = '+json.dumps(profile,ensure_ascii=False)+'\nGOARCH = "amd64"\nCGO_ENABLED = "0"\nGOFLAGS = "-mod=readonly"\nGOMAXPROCS = "2"\n'
-    config+='\n[mcp_servers.context7]\nenabled = true\nurl = "https://mcp.context7.com/mcp"\nstartup_timeout_sec = 60\ntool_timeout_sec = 60\n'
-    config+='\n[mcp_servers.grep_app]\nenabled = true\ndefault_tools_approval_mode = "auto"\nurl = "https://mcp.grep.app"\nenabled_tools = ["searchGitHub"]\nstartup_timeout_sec = 60\ntool_timeout_sec = 60\n'
-    config+='\n[mcp_servers.exa_public_research]\nenabled = true\nurl = "https://mcp.exa.ai/mcp?tools=web_search_exa,web_fetch_exa"\nenabled_tools = ["web_search_exa", "web_fetch_exa"]\nstartup_timeout_sec = 45\ntool_timeout_sec = 45\n'
+    config+='[mcp_servers.xray_gopls_worker.env]\nGOOS = '+json.dumps(profile)+'\nGOARCH = "amd64"\nCGO_ENABLED = "0"\nGOFLAGS = "-mod=readonly"\nGOMAXPROCS = "2"\n'
+    config+=public_research_config()
     (repo/'.codex').mkdir(exist_ok=True)
     (repo/'.codex/config.toml').write_text(config,encoding='utf-8',newline='\n')
     return {'status':'WORKER_CONFIGURED','root':str(repo),'base':base_sha,'profile':profile}

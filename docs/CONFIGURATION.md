@@ -267,3 +267,36 @@ uses `.agents/metrics/shared-integration.json`.
 Uninitialized accounting is explicit missing evidence and permits ordinary
 toolkit startup. An initialized invalid/stale catalog or snapshot remains an
 error. Never fabricate module totals or transfer another project's acceptance.
+
+## Selected role execution
+
+`python .agents/scripts/session.py --list-roles` reads the descriptions, models,
+effort and hashes of the nineteen maintained TOMLs without launching a model or
+running source setup. It works in the standalone toolkit and installed source.
+Unmanaged source-owned profiles/skills are preserved and reported by workspace
+validation; they are not registered or interpreted by this maintained catalog.
+The source installer still requires `github.com/xtls/xray-core`.
+
+From a configured source checkout, run a bounded assigned role with:
+
+```powershell
+python .agents/scripts/session.py --role mu_investigator --exec --json "Inspect the assigned source path"
+```
+
+`--task .local/task.json` supplies an assignment, including the existing deep
+reviewer's Sol evidence/discriminator gate. Put it before `--exec`; arguments
+after `--exec` go to `codex exec`. CLI and task role must agree. Later model,
+profile, competency or source-directory overrides cannot replace the role's
+binding. MCP overrides may only disable a server with `enabled=false`; they
+cannot substitute the verified adapter, arguments, environment or source root.
+TOML quoted/dotted configuration keys are parsed before checking their
+managed root. Unrelated overrides retain normal behavior. Role settings do not
+set sandbox/approval authority. A launch without `--role` retains the ordinary
+configured parent model and effort, including normal user CLI selections.
+
+The launcher verifies the configured source root before execution. In an
+owner-prepared isolated worker it instead checks `worker.json`, exact base,
+sole local queue and Go MCP root. A role TOML sandbox field describes intent;
+actual access still comes from the parent session. No fresh process or role
+name proves runtime/product behavior, and this fallback is not native
+custom-type admission. Fresh native sessions adopt changed advertised roles.

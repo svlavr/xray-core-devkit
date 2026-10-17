@@ -56,6 +56,19 @@ and uses existing model routing. Use `kind=explore,bounded=true` only for a narr
 lookup; cross-owner analysis and reviews use Sol 6.1 High. The existing evidence
 gate and single pool still restrict Astra. No nested delegation or source writes.
 
+Set `role` to the selected maintained competency, for example
+`"role": "mu_concurrency_reviewer"`; model pools do not identify the role.
+Optional `skills` selects extra installed skill packages. Before task creation,
+profile instructions/model/effort and helper/skill/public-document hashes are
+frozen into per-job tooling and bound in native metadata. Advisory cwd is that
+frozen tooling root; assigned source aliases remain explicit separate inputs.
+Mutable launch receipts/scratch live in a Linux-user-owned run directory outside
+the immutable snapshot. Source HEAD and captured WORKTREE/tooling hashes remain
+distinct. Quoted/dotted overrides cannot replace competency/root bindings.
+Resumes keep pinned helpers; preserve old jobs/bundles and uncollected comments.
+These advisory tasks use city Beads storage, while separate prepared
+implementation dispatch uses `rig:mu-core` and `mux-` IDs.
+
 The adapter stores a durable local receipt before native task creation. Stable
 IDs and content hashes prevent accidental duplication: rerun the identical packet
 after inspecting an interruption. It reconciles existing native tasks and routes;
@@ -74,8 +87,9 @@ DONE means an advisory answer was completed, including findings and limits; it
 does not mean that implementation was accepted. Main resolves findings before
 final integration and any reviewed checkpoint explicitly selected by the human.
 
-Before launch the runtime validates and approves only the four exact reviewed
-Gas City hook fingerprints through Codex's native config API. Extra or changed
+Configure validates the four exact reviewed Gas City hook fingerprints through
+Codex's native API. Each frozen launch then binds only its exact cwd and those
+existing hook identities through invocation-scoped project/hook overrides. Extra or changed
 hooks fail for review; there is no blanket hook-trust bypass. This prevents new
 workers from remaining at an unseen confirmation prompt. Context windows and
 the total-scope compaction threshold apply per conversation, not across models

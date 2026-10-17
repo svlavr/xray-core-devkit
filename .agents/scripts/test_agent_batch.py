@@ -2,6 +2,7 @@
 import copy
 import json
 from pathlib import Path
+import sys
 import subprocess
 import tempfile
 import unittest
@@ -17,6 +18,7 @@ def packet():
 
 class FakeNative:
     def __init__(self):self.items={};self.calls=[];self.fail=None
+    def scoped(self,store_ref):return self
     def show(self,id):return copy.deepcopy(self.items.get(id))
     def run(self,args,body=None):
         self.calls.append(args)
@@ -135,6 +137,93 @@ class BatchTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):batch.enqueue(state,native,lambda:None)
         self.assertNotEqual(state['jobs'][0]['phase'],'claimed')
         self.assertFalse(any(c[0]=='sling' and c[2]==first for c in native.calls[6:]))
+
+
+    def test_implementation_ids_and_all_task_operations_use_rig_while_session_owner_uses_city(self):
+        p=packet();p['jobs']=p['jobs'][:1];p['jobs'][0]['kind']='implement'
+        state={'batch_id':p['batch_id'],'jobs':batch.planned_jobs(p,{'linux':'/snapshot','source_head':'a'*40})}
+        job=state['jobs'][0];self.assertTrue(job['id'].startswith('mux-b-'))
+        self.assertEqual(job['store_ref'],'rig:mu-core')
+        self.assertEqual(job['metadata']['mu.store_ref'],'rig:mu-core')
+        databases={'city':{},'rig:mu-core':{}};calls=[]
+        def execute(args,input=None,**kwargs):
+            calls.append(args)
+            if args[0]=='bd':
+                store='rig:mu-core' if args[1:3]==['--rig','mu-core'] else 'city'
+                operation=args[3:] if store=='rig:mu-core' else args[1:]
+                if operation[0]=='show':
+                    item=databases[store].get(operation[1])
+                    return subprocess.CompletedProcess(args,0 if item else 1,
+                        json.dumps([item]).encode() if item else b'',b'' if item else b'not found')
+                self.assertEqual(operation[0],'create')
+                identity=operation[operation.index('--id')+1]
+                self.assertTrue(identity.startswith('mux-b-'));self.assertNotIn(identity,databases[store])
+                databases[store][identity]={'id':identity,'title':operation[1],'description':input.decode(),
+                    'metadata':json.loads(operation[operation.index('--metadata')+1]),'status':'open'}
+            else:
+                self.assertEqual(args[:2],['sling','mu-core/codex'])
+                databases['rig:mu-core'][args[2]]['metadata']['gc.routed_to']=args[1]
+            return subprocess.CompletedProcess(args,0,b'{}',b'')
+        native=batch.Native({},lambda data,args:args)
+        with patch.object(batch.subprocess,'run',side_effect=execute):
+            batch.enqueue(state,native,lambda:None)
+            batch.enqueue(state,native,lambda:None)
+            owner='mc-wisp-owner';databases['rig:mu-core'][job['id']]['assignee']=owner
+            databases['city'][owner]={'id':owner,'issue_type':'session','status':'open',
+                'metadata':{'template':'mu-core/codex','state':'active'}}
+            batch.enqueue(state,native,lambda:None)
+        task_ops=[args for args in calls if args[0]=='bd' and job['id'] in args]
+        self.assertTrue(task_ops);self.assertTrue(all(args[1:3]==['--rig','mu-core'] for args in task_ops))
+        self.assertEqual(len([args for args in task_ops if 'create' in args]),1)
+        self.assertIn(['bd','show',owner,'--json'],calls)
+        self.assertEqual(job['phase'],'claimed')
+
+
+    def test_old_cross_store_implementation_receipt_refuses_before_any_native_mutation(self):
+        p=packet();p['jobs']=p['jobs'][:1];p['jobs'][0]['kind']='implement'
+        state={'batch_id':p['batch_id'],'jobs':batch.planned_jobs(p,{'linux':'/snapshot','source_head':'a'*40})}
+        state['jobs'][0].pop('store_ref');native=FakeNative()
+        with self.assertRaisesRegex(RuntimeError,'store differs from target rig'):batch.enqueue(state,native,lambda:None)
+        self.assertFalse(native.calls)
+
+
+    def test_mutable_roots_are_prepared_by_selected_linux_user_before_freezing(self):
+        data={'distribution':'fixture-distro','user':'fixture-user'}
+        with patch.object(batch.subprocess,'run') as invoke:
+            batch.prepare_run_roots(data,'/owned/runs/unique',['one','two'])
+        args=invoke.call_args.args[0]
+        self.assertEqual(args[:8],['wsl.exe','-d','fixture-distro','-u','fixture-user','--exec','python3','-c'])
+        self.assertEqual(args[-3:],['/owned/runs/unique','one','two'])
+        # Execute the exact creation/write probe on owned local fixture paths;
+        # actual WSL UID ownership remains an integration check.
+        with tempfile.TemporaryDirectory() as folder:
+            runtime=Path(folder)/'runs'
+            subprocess.run([sys.executable,'-c',args[8],str(runtime),'one','two'],check=True,capture_output=True)
+            self.assertTrue((runtime/'one/transient').is_dir())
+            self.assertTrue((runtime/'two/transient').is_dir())
+
+
+    def test_launch_binding_is_native_metadata_before_admission_and_cannot_change(self):
+        state=self.state();native=FakeNative()
+        for job in state['jobs']:
+            job['metadata'].update({'mu.role':'mu_security_reviewer','mu.launch_path':'/frozen/'+job['key'],
+                'mu.launch_sha256':'c'*64,'mu.profile_sha256':'d'*64})
+        batch.enqueue(state,native,lambda:None)
+        for call in native.calls[:3]:
+            meta=json.loads(call[call.index('--metadata')+1])
+            self.assertEqual(meta['mu.role'],'mu_security_reviewer')
+            self.assertEqual(meta['mu.launch_sha256'],'c'*64)
+        native.items[state['jobs'][0]['id']]['metadata']['mu.launch_sha256']='different'
+        with self.assertRaisesRegex(RuntimeError,'metadata differs'):batch.enqueue(state,native,lambda:None)
+        self.assertEqual(len(native.calls),6)
+
+
+    def test_implementation_is_not_rewritten_as_read_only_advice(self):
+        p=packet();p['jobs']=p['jobs'][:1];p['jobs'][0]['kind']='implement'
+        job=batch.planned_jobs(p,{'linux':'/snapshot','source_head':'a'*40})[0]
+        self.assertIn('Honor only the dispatched write set',job['body'])
+        self.assertNotIn('No source edits, Git writes',job['body'])
+
 
 
 if __name__=='__main__':unittest.main()

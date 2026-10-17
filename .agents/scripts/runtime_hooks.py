@@ -43,11 +43,11 @@ def reviewed_hashes(city):
     result={}
     for event,groups in reviewed_document(city)['hooks'].items():
         for index,handler in enumerate(groups[0]['hooks']):
-            # Optional None values are omitted during TOML serialization. The
-            # native normalized timeout is 600 seconds; only SessionStart keeps
-            # its nonempty matcher. All handlers are synchronous.
+            # Pinned native discovery retains PreCompact's empty matcher and
+            # SessionStart's startup matcher; UserPromptSubmit has no matcher.
+            # The normalized timeout is 600 seconds; all handlers are synchronous.
             identity={'event_name':EVENTS[event],'hooks':[{**handler,'timeout':600,'async':False}]}
-            if groups[0]['matcher']:identity['matcher']=groups[0]['matcher']
+            if event=='PreCompact' or groups[0]['matcher']:identity['matcher']=groups[0]['matcher']
             result[EVENTS[event]+':0:'+str(index)]=native_fingerprint(identity)
     return result
 
