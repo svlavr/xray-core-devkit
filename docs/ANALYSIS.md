@@ -78,10 +78,17 @@ through that launcher. Standalone helpers allow XRAY_ANALYSIS_GO and
 XRAY_ANALYSIS_GIT; otherwise they resolve those executable names through PATH.
 Node selection is XRAY_ANALYSIS_NODE first,
 then the host context's recorded `node`, then PATH. The dependency lock records the
-actual supported tool versions. The gopls adapter specifically requires v0.23.0:
-that release's reference-line prose uses zero-based locations, which the adapter
-converts once to one-based lines. Other methods and prose are preserved. A new
-gopls version requires reviewing that correction before changing the pin.
+actual supported tool versions. Fresh provisioning selects gopls v0.24.0.
+The adapter recognizes only qualified v0.23.0 and v0.24.0 binaries and reports the
+actual selected version in MCP initialization. Version 0.24 reference prose is
+already one-based and is preserved; only legacy 0.23 reference prose receives
+one increment. Diagnostics retain upstream zero-based protocol coordinates and
+other methods are unchanged. Unknown versions are refused before backend startup.
+The compatibility path keeps retained 0.23 frontends usable after helper updates
+or idle backend restart; it does not change the fresh dependency default. Setup
+alone does not upgrade binaries. The selected root binds workspace/cwd and keeps
+native cross-module lookup behavior; actual parent access still applies. This
+host-tool qualification is not Xray runtime or source-Go acceptance.
 
 An inspection stores raw MCP initialization/catalogue/call responses, stderr,
 probe log, source/build provenance, exact parsed locations, file context and the
@@ -127,25 +134,55 @@ python .agents/scripts/xray_analysis.py graph-status --repo .
 python .agents/scripts/xray_analysis.py graph-refresh --repo .
 ```
 
-No graph indexing happens during setup or ordinary startup. The graph MCP checks
-freshness on demand and refreshes missing/stale committed source before the first
-query. Dirty source uses live semantic/AST evidence. Uncovered Go roots and local
-workspace files refuse graph refresh until export coverage is explicitly updated.
-Cache identities use canonical checkout paths; manifests record source fingerprint,
-source HEAD, snapshot, index, registry and limited graph coverage. Equal source
-bytes permit reuse across a documentation-only HEAD change; query provenance shows
-both source HEAD and the current validated HEAD. Missing index storage prevents a
-current claim. Failed, cancelled or changed-source refreshes preserve the previous
-manifest. An OS lease coalesces concurrent refresh requests.
+No graph indexing happens during setup or ordinary startup. A cold semantic MCP
+call starts or joins preparation and returns `PREPARING` with a ticket preserving
+its exact original tool and arguments. Call `graph_wait` with that ticket and
+`timeout_seconds` at most 30 until it returns the actual original query result
+or a concrete failure. Each wait is bounded separately from preparation (default
+900 seconds, selectable up to 1200), so the client request limit does not become
+the indexer deadline. Pending preparation is not a semantic answer. Retained completed/terminal tickets return
+their cached original response, marked historical, even after later preparation;
+terminal responses remain eligible for eviction at the bounded ticket capacity.
 
-Graph queries reuse a backend only for the current immutable index generation.
-Source and manifest are checked again after a query. Initialization, backend
-startup, catalogue reads and queued work have total deadlines. Exact queued and
-active cancellation is scoped to that request; stalled uncooperative operations
-retire their owned frontend and descendants. Backends release after idle time and
-replay initialization when needed. Catalogue-change notifications invalidate the
-cache without dropping the tool surface. Keepalive control requests do not retain
-heavy backends indefinitely.
+`graph_prepare(force=false, timeout_seconds=900)` starts or joins explicitly;
+`graph_status` validates readiness and reports phase, elapsed time and log;
+`graph_cancel(preparation_id=...)` cancels only this frontend's exact preparation.
+Cancelling a wait leaves preparation running. Another frontend joins the existing
+checkout lease; owner shutdown cancels its analyzer and releases the lease for
+recovery. Analyzer launches
+publish a durable nonce/birth-bound custody claim before spawning; the next owner
+fences delayed launches and verifies the exact old tree is gone before admission.
+This closes the frontend-death gap between lease release and descendant cleanup. `list_repos` is cheap inventory and never starts preparation or validates
+semantic freshness. A failed source/analyzer identity is latched to prevent the
+same automatic cold retry: inspect its failure/log and use `graph_prepare` with
+`force=true` after correcting the cause. Force rebuilds a current graph too.
+
+CLI preparation streams progress to stderr while the reported analyzer log grows:
+
+```powershell
+python .agents/scripts/xray_analysis.py graph-refresh --repo . --prepare-seconds 900
+python .agents/scripts/xray_analysis.py graph-refresh --repo . --force
+```
+
+Manifests bind source bytes, export policy/schema, installed GitNexus version/build,
+lockfile and selected tree-sitter/Ladybug artifacts. Cached size/mtime signatures
+track ordinary installed updates; this is freshness identity, not full dependency
+attestation. Cache roots use canonical checkout paths. Archive export includes only
+covered roots present in the exact committed revision; an empty selection refuses
+rather than exporting all of HEAD. Dirty source, uncovered Go roots and local
+workspace files prevent a current claim until the relevant scope is accepted.
+Missing/corrupt index storage also prevents readiness. Failed, cancelled or changed
+source/analyzer preparation preserves the previous immutable manifest. Equal
+source bytes permit documentation-only HEAD reuse with both source and current
+validated HEAD visible in query provenance.
+
+Graph queries reuse one backend for the current immutable generation, and validate
+source/manifest after execution. Initialization, backend startup, catalogues and
+queued requests retain total deadlines. Exact request cancellation and stalled
+operation retirement affect only the owned frontend/descendants. Backends release
+after idle time and replay initialization on demand. Catalogue-change notifications
+invalidate caches without dropping the tool surface. Keepalive requests do not
+retain heavy backends indefinitely. Start a fresh frontend after launcher edits.
 
 ## Managed resources and limits
 

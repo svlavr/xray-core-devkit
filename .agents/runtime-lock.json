@@ -3,16 +3,16 @@
   "assets": [
     {
       "name": "gascity",
-      "version": "v1.5.0",
-      "url": "https://github.com/gastownhall/gascity/releases/download/v1.5.0/gascity_1.5.0_linux_amd64.tar.gz",
-      "sha256": "0ff5cfc3f1cb2e4260d3d93fcce7a4e40bb5675b74eb9de185156757d4f7fa9c",
+      "version": "v1.5.1",
+      "url": "https://github.com/gastownhall/gascity/releases/download/v1.5.1/gascity_1.5.1_linux_amd64.tar.gz",
+      "sha256": "3a405a5455eb6216f7f65d4516a614e4913d83bc8964df8800e0533ab2d40044",
       "executable": "gc"
     },
     {
       "name": "beads",
-      "version": "v1.3.1",
-      "url": "https://github.com/gastownhall/beads/releases/download/v1.3.1/beads_1.3.1_linux_amd64.tar.gz",
-      "sha256": "3219443a9734b89b93fb16ee8d65844759fa1b3cd3cf139c606b7353cfb0715c",
+      "version": "v1.3.4",
+      "url": "https://github.com/gastownhall/beads/releases/download/v1.3.4/beads_1.3.4_linux_amd64.tar.gz",
+      "sha256": "175c26904bde3ff9168d2282ff6b56f17b17f60c22fa5acb3dacc9fb3465303a",
       "executable": "bd"
     },
     {
@@ -24,15 +24,17 @@
     },
     {
       "name": "codex",
-      "version": "rust-v0.162.0-alpha.2",
-      "url": "https://github.com/openai/codex/releases/download/rust-v0.162.0-alpha.2/codex-package-x86_64-unknown-linux-musl.tar.gz",
-      "sha256": "679caa80315c126a8b2118fb76b3795268dc2592f501dd4ecc44f6861c44477f",
+      "version": "rust-v0.166.0",
+      "url": "https://github.com/openai/codex/releases/download/rust-v0.166.0/codex-package-x86_64-unknown-linux-musl.tar.gz",
+      "sha256": "1d44b28bc4ac9937d7d3532264baa68a507ce364956a0d4ebb856f331cdee254",
       "executable": "codex",
       "required_members": [
         "bin/codex",
         "bin/codex-code-mode-host",
+        "bin/codex-exec-server",
         "codex-path/rg",
-        "codex-resources/bwrap"
+        "codex-resources/bwrap",
+        "codex-package.json"
       ]
     }
   ]

@@ -377,7 +377,7 @@ def check_models(data):
 
 def trust_city_hooks(data):
     checked=subprocess.run(['wsl.exe','-d',data['distribution'],'-u',data['user'],'--exec','python3',
-        runtime_tools(data)+'/runtime_hooks.py','--root',data['city']],capture_output=True,
+        runtime_tools(data)+'/runtime_hooks.py','--root',data['city'],'--city',data['city']],capture_output=True,
         timeout=60,creationflags=FLAGS)
     if checked.returncode:
         raise RuntimeError('Reviewed hook preparation failed: '+checked.stderr.decode('utf-8',errors='replace').strip())

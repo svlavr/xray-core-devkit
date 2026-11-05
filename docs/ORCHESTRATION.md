@@ -8,10 +8,19 @@ conventions, not a connection to another repository.
 
 ## Pinned runtime and prerequisites
 
-[`.agents/runtime-lock.json`](../.agents/runtime-lock.json) pins Linux amd64 Gas City 1.5.0, Beads 1.3.1,
-Dolt 2.4.2 and the complete Codex rust-v0.162.0-alpha.2 package by URL and SHA256.
+[`.agents/runtime-lock.json`](../.agents/runtime-lock.json) pins Linux amd64 Gas City 1.5.1, Beads 1.3.4,
+Dolt 2.4.2 and the complete Codex rust-v0.166.0 package by URL and SHA256.
 The roles import in [`.agents/orchestration/city.toml`](../.agents/orchestration/city.toml) is also commit-pinned.
 Do not use an unpinned curl-to-shell installer or replace an existing runtime.
+
+The selected GC 1.5.1 / Beads 1.3.4 / Dolt 2.4.2 combination passed disposable
+direct/proxied store operations, retained results and foreground supervisor
+termination checks. This is scoped host-tool evidence; it is not an upstream
+compatibility guarantee, authenticated-role qualification or acceptance of an
+existing queue migration. Preserve queues/results and qualify the actual selected
+installation before switching it. Upstream GC declares older Beads/Dolt pins;
+this toolkit deliberately retains Dolt 2.4.2 for the separately tested pairing.
+Changing this distribution never upgrades an existing installed runtime.
 
 The user must explicitly prepare a dedicated WSL2 Linux amd64 distribution,
 unprivileged Linux user with its home at `/home/<user>`, outbound network access,
@@ -87,7 +96,7 @@ portable dependency installer as the host:
 python3 .agents/scripts/dependencies.py install --tools "$HOME/xray-tools"
 ```
 
-The tool pins include gopls v0.23.0. Run `python3 .agents/scripts/dependencies.py status --tools "$HOME/xray-tools"`
+The tool pins include gopls v0.24.0. Run `python3 .agents/scripts/dependencies.py status --tools "$HOME/xray-tools"`
 and the dependency verification documented in [INSTALLATION.md](INSTALLATION.md). A worker needs `$HOME/xray-tools/bin/gopls` and Go on its Linux
 PATH; Windows gopls binaries cannot substitute for Linux worker tools. Configure
 Git identity inside this dedicated user account before allowing worker commits.
@@ -384,7 +393,15 @@ uncollected results, including the one-time identity record.
 `configure` still verifies/persists only the exact reviewed city hook inventory
 and preserves unrelated dedicated-user settings. Per-job project/hook trust is
 invocation-only. Changed or extra hooks fail qualification; the bootstrap never
-replaces hooks or installs a blanket trust bypass.
+replaces hooks or installs a blanket trust bypass. New launch manifests bind the explicit
+validated city; bootstrap rejects a different native `GC_CITY`. GC 1.5.1's city
+is rendered with literal single quotes and SessionStart's matcher is `startup`.
+Expected Codex 0.166 fingerprints come from that reviewed document, never from
+untrusted native `currentHash` values. Source bytes are checked around native
+inventory/trust operations; duplicate JSON keys, aliases and unknown/mixed groups
+fail closed. New roots are prepared without replacing old immutable bundles.
+Existing frozen jobs retain their own helper and hook bytes; current code does
+not migrate an old unquoted template automatically.
 
 ## Validation boundary and recovery
 
@@ -421,13 +438,13 @@ authorized successful request before its execution can be called qualified.
 Do not create a city, log in, or run a model merely to replace an UNKNOWN gate
 with a passing label.
 
-Pinned implementation references: [GC init](https://github.com/gastownhall/gascity/blob/v1.5.0/cmd/gc/cmd_init.go),
-[GC rig commands](https://github.com/gastownhall/gascity/blob/v1.5.0/cmd/gc/cmd_rig.go),
-[GC worktrees](https://github.com/gastownhall/gascity/blob/v1.5.0/cmd/gc/cmd_worktree.go),
-[Beads task creation](https://github.com/gastownhall/beads/blob/v1.3.1/cmd/bd/create.go),
-[GC hook rendering](https://github.com/gastownhall/gascity/blob/v1.5.0/internal/hooks/hooks.go),
-[Codex hook discovery](https://github.com/openai/codex/blob/rust-v0.162.0-alpha.2/codex-rs/hooks/src/engine/discovery.rs)
-and [native identity hashing](https://github.com/openai/codex/blob/rust-v0.162.0-alpha.2/codex-rs/config/src/fingerprint.rs).
-The versioned [Codex hook schema](https://github.com/openai/codex/blob/rust-v0.162.0-alpha.2/codex-rs/app-server-protocol/schema/typescript/v2/HookMetadata.ts)
-and [configuration edits](https://github.com/openai/codex/blob/rust-v0.162.0-alpha.2/codex-rs/app-server-protocol/schema/typescript/v2/ConfigBatchWriteParams.ts)
+Pinned implementation references: [GC init](https://github.com/gastownhall/gascity/blob/v1.5.1/cmd/gc/cmd_init.go),
+[GC rig commands](https://github.com/gastownhall/gascity/blob/v1.5.1/cmd/gc/cmd_rig.go),
+[GC worktrees](https://github.com/gastownhall/gascity/blob/v1.5.1/cmd/gc/cmd_worktree.go),
+[Beads task creation](https://github.com/gastownhall/beads/blob/v1.3.4/cmd/bd/create.go),
+[GC hook rendering](https://github.com/gastownhall/gascity/blob/v1.5.1/internal/hooks/hooks.go),
+[Codex hook discovery](https://github.com/openai/codex/blob/rust-v0.166.0/codex-rs/hooks/src/engine/discovery.rs)
+and [native identity hashing](https://github.com/openai/codex/blob/rust-v0.166.0/codex-rs/config/src/fingerprint.rs).
+The versioned [Codex hook schema](https://github.com/openai/codex/blob/rust-v0.166.0/codex-rs/app-server-protocol/schema/typescript/v2/HookMetadata.ts)
+and [configuration edits](https://github.com/openai/codex/blob/rust-v0.166.0/codex-rs/app-server-protocol/schema/typescript/v2/ConfigBatchWriteParams.ts)
 own the native trust API. See also the official [app-server handshake](https://learn.chatgpt.com/docs/app-server#initialization).

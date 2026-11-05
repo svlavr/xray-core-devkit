@@ -14,7 +14,7 @@ Use this reference to find a file's purpose, who reads it, and where to change a
 
 - [README.md](../README.md): human entry point and quick start; read before installation.
 - [AGENTS.md](../AGENTS.md): contributor scope, ownership and publication rules read by agents in this distribution. The target retains its own instructions.
-- [.agents/CODEX_PACK.md](../.agents/CODEX_PACK.md): shared workflow, model routing, evidence and resource policy read at task startup; links to selected skills/contracts.
+- [.agents/CODEX_PACK.md](../.agents/CODEX_PACK.md): compact mandatory authority/access and task-selected references read at startup; retains the complete skill/role catalog.
 - [devkit.py](../devkit.py): distribution command for `manifest`, `verify`, `install`, `update`, `package`; maintainers edit installer policy here. Users select an explicit target and can inspect `--dry-run`.
 - [devkit-manifest.json](../devkit-manifest.json): generated public file inventory/SHA256 values read by verification, packaging, installation and audit. Regenerate with `python devkit.py manifest` after reviewing public bytes. It does not hash itself.
 - [audit.py](../audit.py): maintainer command checking verified payload for credential patterns, personal paths and local dependency resolutions; reports locations without matched secrets. Pattern checks do not replace content review.
@@ -31,6 +31,7 @@ These maintained guides are read by humans and linked workflows, not executed:
 - [docs/CONFIGURATION.md](CONFIGURATION.md): project selections, generated settings, capability checks and startup.
 - [docs/PROJECT_SCOPE.md](PROJECT_SCOPE.md): owner-supplied source/contract/baseline/write-set/acceptance/publication inputs.
 - [docs/WORKFLOW.md](WORKFLOW.md): evidence, validation, review, accounting and checkpoint rules.
+- [docs/AGENT_OPERATIONS.md](AGENT_OPERATIONS.md): detailed task-selected role/routing, evidence, access, host and resource policy; not a mandatory full prompt.
 - [docs/ANALYSIS.md](ANALYSIS.md): profiles, Go helper chains, graph freshness, provenance and resource lifetime.
 - [docs/ORCHESTRATION.md](ORCHESTRATION.md): optional WSL bootstrap, city/queue/workers/hooks/batches/recovery.
 - [docs/ACCOUNTING_AND_EXPORT.md](ACCOUNTING_AND_EXPORT.md): catalogs, snapshots and filtered-export configuration.
@@ -151,15 +152,15 @@ These maintained Python files live in `.agents/scripts/`. Some are commands, oth
 
 ### Go, graph and MCP chain
 
-- [xray_analysis.py](../.agents/scripts/xray_analysis.py): status/package/symbol/graph commands; root/profile/source fingerprints/caches. Graph refresh needs committed covered source; startup builds no index.
+- [xray_analysis.py](../.agents/scripts/xray_analysis.py): status/package/symbol/graph commands; root/profile/source fingerprints/caches. Graph preparation needs committed covered source and binds analyzer/export identity; streams progress without startup indexing.
 - [package_map.py](../.agents/scripts/package_map.py): command/imported guarded `go list` maps, production/test edges and reverse imports; called by package analysis.
 - [inspect_go.py](../.agents/scripts/inspect_go.py): command called by symbol analysis; checks actual workspace, invokes bundled MCP/ast-grep chain, parses references and writes fresh source/build receipts.
 - [mcp_probe.py](../.agents/scripts/mcp_probe.py): bounded JSON-lines probe called by inspection; raw initialization/catalog/call results, stderr and logs. Put `--args` last.
-- [go_mcp.py](../.agents/scripts/go_mcp.py): stdio adapter used by Go launcher/probes/workers; explicit binary/root, gopls v0.23.0 check and version-specific one-based reference-line correction.
+- [go_mcp.py](../.agents/scripts/go_mcp.py): stdio adapter used by Go launcher/probes/workers; explicit binary/root, qualified gopls v0.23.0/v0.24.0 checks and one-based reference prose, with conversion only for legacy v0.23.0.
 - [gopls_stdio.py](../.agents/scripts/gopls_stdio.py): compatibility entrypoint forwarding explicit binary/root to the same adapter.
-- [xray_mcp.py](../.agents/scripts/xray_mcp.py): configured gopls/GitNexus entrypoint; checkout/profile provenance, freshness, deadlines/cancellation. Identity mode starts no backend; check actual `go_workspace` separately.
+- [xray_mcp.py](../.agents/scripts/xray_mcp.py): configured gopls/GitNexus entrypoint; checkout/profile provenance, preparation/status/wait/cancel, exact query tickets and generation reuse. Identity mode starts no backend; check actual `go_workspace` separately.
 - [mcp_backend.py](../.agents/scripts/mcp_backend.py): imported sequential/persistent clients used by probe/graph gateway; initialization, response matching, deadlines and shutdown.
-- [resource_guard.py](../.agents/scripts/resource_guard.py): shared subprocess owner/direct runner; marked TEMP, descendant containment, timeout/cancellation/inactive recovery and MCP idle release. Tests/builds use `--timeout ... -- <command>`; durable outputs stay outside scratch.
+- [resource_guard.py](../.agents/scripts/resource_guard.py): shared subprocess owner/direct runner; marked TEMP, descendant containment, timeout/cancellation/inactive recovery, optional durable analyzer custody and MCP idle release. Tests/builds use `--timeout ... -- <command>`; durable outputs stay outside scratch.
 
 ### Source evidence and export
 
@@ -202,7 +203,7 @@ The twenty `.agents/scripts/test_*.py` modules are:
 - [test_ownership_map.py](../.agents/scripts/test_ownership_map.py): exact ownership/blob maps.
 - [test_public_export.py](../.agents/scripts/test_public_export.py): allowlists/private paths/history/drift/publication guards in synthetic Git trees.
 - [test_remote_evidence.py](../.agents/scripts/test_remote_evidence.py): LIVE/mismatch/UNAVAILABLE/reuse/retained failures.
-- [test_resource_guard.py](../.agents/scripts/test_resource_guard.py): descendants/scratch recovery/idle release/cancellation.
+- [test_resource_guard.py](../.agents/scripts/test_resource_guard.py): descendants/scratch recovery/idle release/cancellation, durable launch fencing and exact named-job owner-death recovery.
 - [test_runtime_hooks.py](../.agents/scripts/test_runtime_hooks.py): reviewed commands/native fingerprints/trust.
 - [test_source_size.py](../.agents/scripts/test_source_size.py): blob accounting/categories/ownership/snapshots.
 - [test_worker_context.py](../.agents/scripts/test_worker_context.py): queue/base/isolated configuration, exact public-retrieval allowlists and regeneration without stale auth/denials.

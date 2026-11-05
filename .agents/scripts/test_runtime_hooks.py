@@ -1,10 +1,13 @@
 """Hook automation must not trust additional or changed commands."""
 import copy
+import os
+import queue
+import subprocess
 import runtime_hooks
 from unittest.mock import patch
 from pathlib import Path
 import unittest
-from runtime_hooks import reviewed_hashes,reviewed_document,prepare_hooks,approved_state,native_fingerprint
+from runtime_hooks import reviewed_hashes,reviewed_document,prepare_hooks,approved_state,native_fingerprint,reviewed_source
 import tempfile
 import json
 import tomllib
@@ -68,7 +71,7 @@ class HookTrustTests(unittest.TestCase):
             with self.assertRaises(ValueError):reviewed_hashes(city)
         document=reviewed_document('/srv/city')
         self.assertEqual(document['hooks']['SessionStart'][0]['matcher'],'startup')
-        self.assertIn('gc --city /srv/city ',document['hooks']['PreCompact'][0]['hooks'][0]['command'])
+        self.assertIn("gc --city '/srv/city' ",document['hooks']['PreCompact'][0]['hooks'][0]['command'])
 
     def test_missing_hooks_are_generated_but_changed_commands_are_preserved(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -81,5 +84,113 @@ class HookTrustTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError,'review required'):prepare_hooks(root,'/srv/city')
             self.assertEqual(target.read_text(),'{"hooks":{}}')
 
+
+    def inventory(self,root,group):
+        source=str(root/'.codex/hooks.json')
+        return {'data':[{'cwd':str(root),'hooks':[{'key':source+':'+key,'currentHash':value,
+            'sourcePath':source,'source':'project','handlerType':'command','enabled':True,
+            'pluginId':None,'trustStatus':'untrusted'} for key,value in group.items()]}]}
+
+    def test_source_parent_hash_enabled_and_extra_inventory_controls_fail_closed(self):
+        root=Path('/root');city='/srv/city';data=self.inventory(root,reviewed_hashes(city))
+        changes=[('currentHash','sha256:arbitrary'),('sourcePath',str(root.parent/'.codex/hooks.json')),
+                 ('source','user'),('enabled',False),('enabled','true'),('pluginId','plugin'),('pluginId',''),('handlerType','prompt')]
+        for key,value in changes:
+            altered=copy.deepcopy(data);altered['data'][0]['hooks'][0][key]=value
+            with self.subTest(key=key),self.assertRaises(RuntimeError):approved_state(root,altered,city)
+        parent=copy.deepcopy(data);parent['data'][0]['cwd']=str(root.parent)
+        with self.assertRaises(RuntimeError):approved_state(root,parent,city)
+        extra=copy.deepcopy(data);extra['data'][0]['hooks'].append(extra['data'][0]['hooks'][0])
+        with self.assertRaises(RuntimeError):approved_state(root,extra,city)
+
+    def test_prepare_creates_only_known_template_and_rejects_changed_or_aliased_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);city='/srv/city'
+            prepare_hooks(root,city);self.assertEqual(json.loads((root/'.codex/hooks.json').read_text()),reviewed_document(city))
+            self.assertEqual(len(reviewed_source(root,city)),64)
+            target=root/'.codex/hooks.json';target.write_text('{"hooks":{}}')
+            with self.assertRaisesRegex(RuntimeError,'review required'):prepare_hooks(root,city)
+            self.assertEqual(target.read_text(),'{"hooks":{}}')
+            target.write_text('{"hooks":{},"hooks":'+json.dumps(reviewed_document(city)['hooks'])+'}')
+            with self.assertRaisesRegex(RuntimeError,'Duplicate JSON'):prepare_hooks(root,city)
+            target.unlink();outside=root/'outside.json';outside.write_text(json.dumps(reviewed_document(city)))
+            os.link(outside,target)
+            with self.assertRaisesRegex(RuntimeError,'unaliased'):prepare_hooks(root,city)
+        for city in ('/srv/../other','/srv/city;echo','/srv/city name','//srv/city','/'):
+            with self.subTest(city=city),self.assertRaises(ValueError):reviewed_hashes(city)
+
+    def test_symlink_or_reparse_parent_is_rejected_before_creating_hooks(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base=Path(directory);root=base/'project';root.mkdir();outside=base/'outside';outside.mkdir()
+            link=root/'.codex'
+            if os.name=='nt':
+                result=subprocess.run(['cmd','/c','mklink','/J',str(link),str(outside)],capture_output=True)
+                if result.returncode:self.skipTest('Junction creation unavailable')
+            else:link.symlink_to(outside,target_is_directory=True)
+            with self.assertRaisesRegex(RuntimeError,'alias'):prepare_hooks(root,'/srv/city')
+            self.assertFalse((outside/'hooks.json').exists())
+
+    def test_native_hash_aba_is_rejected_even_when_source_snapshot_is_restored(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);city='/srv/city';prepare_hooks(root,city)
+            target=root/'.codex/hooks.json';original=target.read_bytes();inventory=self.inventory(root,reviewed_hashes(city))
+            inbox=queue.Queue();requests=[]
+            class Input:
+                def write(self,line):
+                    request=json.loads(line);requests.append(request)
+                    if request['method']=='hooks/list':
+                        target.write_text('{"hooks":{}}');target.write_bytes(original)
+                        altered=copy.deepcopy(inventory);altered['data'][0]['hooks'][0]['currentHash']='sha256:attacker-command'
+                        result=altered
+                    else:result={}
+                    inbox.put(json.dumps({'id':request['id'],'result':result})+'\n')
+                def flush(self):pass
+            class Native:
+                stdin=Input()
+                def __init__(self):self.stdout=iter(lambda:inbox.get(),None)
+                def terminate(self):inbox.put(None)
+                def wait(self,timeout=None):return 0
+            with patch.object(runtime_hooks.subprocess,'Popen',return_value=Native()):
+                with self.assertRaisesRegex(RuntimeError,'reviewed Gas City template'):runtime_hooks._trust(root,city)
+            self.assertFalse(any(request['method']=='config/batchWrite' for request in requests))
+            self.assertEqual(target.read_bytes(),original)
+
+    def test_old_unquoted_or_mixed_templates_are_preserved_and_refused(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);city='/srv/city';prepare_hooks(root,city)
+            current=reviewed_document(city)
+            legacy=json.loads(json.dumps(current).replace("gc --city '"+city+"' ",'gc --city '+city+' '))
+            mixed=copy.deepcopy(current);mixed['hooks']['PreCompact']=legacy['hooks']['PreCompact']
+            for value in (legacy,mixed):
+                target=root/'.codex/hooks.json';target.write_text(json.dumps(value));raw=target.read_bytes()
+                with self.assertRaisesRegex(RuntimeError,'review required'):prepare_hooks(root,city)
+                self.assertEqual(target.read_bytes(),raw)
+
+
+
+    def test_replacement_during_native_inventory_is_rejected_before_config_write(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);city='/srv/city';prepare_hooks(root,city)
+            target=root/'.codex/hooks.json';original=target.read_bytes();inventory=self.inventory(root,reviewed_hashes(city))
+            inbox=queue.Queue();requests=[]
+            class Input:
+                def write(self,line):
+                    request=json.loads(line);requests.append(request)
+                    if request['method']=='hooks/list':
+                        target.write_text('{"hooks":{}}')
+                        altered=copy.deepcopy(inventory)
+                        result=altered
+                    else:result={}
+                    inbox.put(json.dumps({'id':request['id'],'result':result})+'\n')
+                def flush(self):pass
+            class Native:
+                stdin=Input()
+                def __init__(self):self.stdout=iter(lambda:inbox.get(),None)
+                def terminate(self):inbox.put(None)
+                def wait(self,timeout=None):return 0
+            with patch.object(runtime_hooks.subprocess,'Popen',return_value=Native()):
+                with self.assertRaisesRegex(RuntimeError,'review required'):runtime_hooks._trust(root,city)
+            self.assertFalse(any(request['method']=='config/batchWrite' for request in requests))
+            self.assertEqual(target.read_text(),'{"hooks":{}}')
 
 if __name__=='__main__':unittest.main()

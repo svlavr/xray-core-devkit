@@ -426,5 +426,136 @@ for line in sys.stdin:
         process.stdout.close();process.stderr.close()
 
 
+    def test_custody_normal_completion_reaps_children_before_next_admission(self):
+        claim=self.root/'custody.json'
+        pid_file=self.root/'pid'
+        result=guard.run([sys.executable,str(self.child_script(True)),str(pid_file)],
+            transient=self.base,capture_output=True,text=True,timeout=4,custody_path=claim)
+        self.assertEqual(result.returncode,0)
+        guard.wait_custody(claim,timeout=4)
+        self.assertEqual(guard.custody_read(claim)['state'],'COMPLETE')
+        self.assertTrue(gone(int(pid_file.read_text())))
+        self.assertEqual(guard.run([sys.executable,'-c','pass'],transient=self.base,
+            custody_path=claim,timeout=4).returncode,0)
+        guard.wait_custody(claim,timeout=4)
+
+    def test_custody_owner_death_reaps_exact_tree_before_new_owner_and_keeps_sibling(self):
+        claim=self.root/'custody.json'
+        pid_file=self.root/'pid'
+        owner=self.root/'custody-owner.py'
+        owner.write_text("import sys,time\nsys.path.insert(0,sys.argv[1])\nimport resource_guard as g\n"
+            "p=g.ManagedProcess([sys.executable,sys.argv[2],sys.argv[3]],transient=sys.argv[4],custody_path=sys.argv[5])\ntime.sleep(60)\n")
+        sibling=guard.ManagedProcess([sys.executable,'-c','import time;time.sleep(60)'],
+            transient=self.root/'sibling',stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        self.addCleanup(lambda:guard.stop(sibling))
+        process=subprocess.Popen([sys.executable,str(owner),str(Path(guard.__file__).parent),
+            str(self.child_script()),str(pid_file),str(self.base),str(claim)])
+        self.addCleanup(lambda:process.kill() if process.poll() is None else None)
+        self.wait_for(pid_file.exists)
+        child=int(pid_file.read_text())
+        handle=None
+        if os.name=='nt':
+            kernel=guard._kernel()
+            handle=kernel.OpenProcess(0x100000,False,child)
+            self.assertTrue(handle)
+        try:
+            process.kill();process.wait(timeout=4)
+            guard.wait_custody(claim,timeout=5)
+            if handle:self.assertEqual(kernel.WaitForSingleObject(handle,0),0)
+            else:self.assertTrue(gone(child))
+            self.assertEqual(guard.custody_read(claim)['state'],'COMPLETE')
+            self.assertIsNone(sibling.poll())
+            self.assertEqual(guard.run([sys.executable,'-c','pass'],transient=self.base,
+                custody_path=claim,timeout=4).returncode,0)
+            guard.wait_custody(claim,timeout=4)
+        finally:
+            if handle:kernel.CloseHandle(handle)
+
+    @unittest.skipUnless(os.name=='nt','Windows named job recovery control')
+    def test_named_job_recovery_reaps_children_held_alive_by_another_job_handle(self):
+        from ctypes import wintypes
+        claim=self.root/'custody.json'
+        pid_file=self.root/'pid'
+        process=guard.ManagedProcess([sys.executable,str(self.child_script()),str(pid_file)],
+            transient=self.base,custody_path=claim,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        self.addCleanup(lambda:guard.stop(process))
+        self.wait_for(pid_file.exists)
+        value=guard.custody_read(claim)
+        kernel=guard._kernel()
+        kernel.OpenJobObjectW.argtypes=[wintypes.DWORD,wintypes.BOOL,wintypes.LPCWSTR]
+        kernel.OpenJobObjectW.restype=wintypes.HANDLE
+        job=kernel.OpenJobObjectW(0x0004,False,value['job'])
+        child=kernel.OpenProcess(0x100000,False,int(pid_file.read_text()))
+        self.assertTrue(job);self.assertTrue(child)
+        try:
+            guard.stop(process)
+            self.assertEqual(kernel.WaitForSingleObject(child,0),258,'Countercontrol must retain a live child after supervisor death')
+            guard.wait_custody(claim,timeout=4)
+            self.assertEqual(kernel.WaitForSingleObject(child,0),0)
+            self.assertEqual(guard.custody_read(claim)['state'],'COMPLETE')
+        finally:
+            kernel.CloseHandle(job);kernel.CloseHandle(child)
+
+    def test_delayed_supervisor_is_fenced_before_active_publication(self):
+        claim=self.root/'custody.json'
+        gate=self.root/'release'
+        reached=self.root/'before-active'
+        analyzer=self.root/'analyzer-started'
+        wrapper=self.root/'delayed-supervisor.py'
+        scripts=str(Path(guard.__file__).parent)
+        wrapper.write_text("import sys,time,pathlib\nsys.path.insert(0,"+repr(scripts)+")\nimport resource_guard as g\n"
+            "original=g.custody_activate\n"
+            "def activate(path,nonce):\n pathlib.Path("+repr(str(reached))+").touch()\n"
+            " while not pathlib.Path("+repr(str(gate))+").exists():time.sleep(.01)\n"
+            " return original(path,nonce)\n"
+            "g.custody_activate=activate\nraise SystemExit(g.main())\n")
+        owner=self.root/'delayed-owner.py'
+        owner.write_text("import sys,time\nsys.path.insert(0,"+repr(scripts)+")\nimport resource_guard as g\n"
+            "g.__file__="+repr(str(wrapper))+"\n"
+            "p=g.ManagedProcess([sys.executable,'-c',"+repr("import pathlib;pathlib.Path("+repr(str(analyzer))+").touch()")+"],transient="+repr(str(self.base))+",custody_path="+repr(str(claim))+")\ntime.sleep(60)\n")
+        process=subprocess.Popen([sys.executable,str(owner)])
+        self.addCleanup(lambda:process.kill() if process.poll() is None else None)
+        self.addCleanup(lambda:gate.touch())
+        self.wait_for(reached.exists)
+        process.kill();process.wait(timeout=4)
+        guard.wait_custody(claim,timeout=4)
+        self.assertEqual(guard.custody_read(claim)['state'],'ABORTED')
+        # A new supervisor may now own the same claim; the old nonce remains
+        # fenced even after it resumes with a live replacement present.
+        replacement_done=self.root/'replacement-done'
+        replacement_script="import pathlib,time\nwhile not pathlib.Path("+repr(str(replacement_done))+").exists():time.sleep(.01)"
+        replacement=guard.ManagedProcess([sys.executable,'-c',replacement_script],
+            transient=self.base,custody_path=claim,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        self.addCleanup(lambda:guard.stop(replacement))
+        self.wait_for(lambda:guard.custody_read(claim)['state']=='ACTIVE')
+        gate.touch()
+        replacement_done.touch()
+        replacement.wait(timeout=4)
+        guard.wait_custody(claim,timeout=4)
+        self.assertFalse(analyzer.exists())
+
+    def test_custody_launch_failure_retires_intent_and_malformed_claim_fails_closed(self):
+        claim=self.root/'custody.json'
+        with patch.object(subprocess.Popen,'__init__',side_effect=OSError('launch failed')):
+            with self.assertRaisesRegex(OSError,'launch failed'):
+                guard.ManagedProcess([sys.executable,'-c','pass'],transient=self.base,custody_path=claim)
+        self.assertEqual(guard.custody_read(claim)['state'],'ABORTED')
+        claim.write_text('{broken')
+        with self.assertRaises(ValueError):guard.wait_custody(claim,timeout=.1)
+
+    def test_joined_supervisor_initialization_failure_retires_its_launch_intent(self):
+        claim=self.root/'custody.json'
+        wrapper=self.root/'failed-supervisor.py'
+        wrapper.write_text('raise SystemExit(11)')
+        with patch.object(guard,'__file__',str(wrapper)):
+            process=guard.ManagedProcess([sys.executable,'-c','pass'],transient=self.base,
+                custody_path=claim,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        self.assertEqual(process.wait(timeout=4),11)
+        guard.wait_custody(claim,timeout=.1)
+        self.assertEqual(guard.custody_read(claim)['state'],'ABORTED')
+        result=guard.run([sys.executable,'-c','pass'],transient=self.base,custody_path=claim,timeout=4)
+        self.assertEqual(result.returncode,0)
+        guard.wait_custody(claim,timeout=4)
+
 if __name__ == '__main__':
     unittest.main()

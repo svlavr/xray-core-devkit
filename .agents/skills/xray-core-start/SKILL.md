@@ -6,9 +6,10 @@ description: Initialize the explicitly selected Xray Core workspace and report e
 # Selected source startup
 
 Read the current root's `AGENTS.md`, applicable `AGENTS.override.md`,
-`.agents/CODEX_PACK.md`, `docs/PROJECT_SCOPE.md`, `docs/WORKFLOW.md`, the human's
-accepted task/contract and, for an installed source checkout, ignored
-`.local/workspace/context.json`. Run `python .agents/scripts/check_core.py`
+`.agents/CODEX_PACK.md`, the human's accepted task/contract and, for an installed
+source checkout, ignored `.local/workspace/context.json`. Select the source-startup
+and accounting sections of `docs/WORKFLOW.md` and scope inputs in
+`docs/PROJECT_SCOPE.md` as needed; do not load all workflow references by default. Run `python .agents/scripts/check_core.py`
 from that source root after workspace setup; it requires the Xray Go module.
 For toolkit-only maintenance, work from the DevKit root containing `devkit.py`
 and use `python devkit.py verify`, `python audit.py` and

@@ -31,8 +31,8 @@ The **DevKit root** is the download containing `devkit.py`; it cannot serve as
 the Xray source root. Check [file locations](FILES.md) if unsure which directory
 owns a command.
 
-The analysis dependencies are gopls `v0.23.0`, deadcode `v0.50.0`, GitNexus
-`1.6.12`, Repomix `1.18.1` and ast-grep CLI `0.45.3`. npm transitive versions and
+The analysis dependencies are gopls `v0.24.0`, deadcode `v0.50.0`, GitNexus
+`1.6.12`, Repomix `1.18.1` and ast-grep CLI `0.51.1`. npm transitive versions and
 tarball integrity are recorded in included package locks. The gopls adapter's
 reference-line correction is specific to its pinned release. Review
 [third-party notices](../THIRD_PARTY_NOTICES.md), including GitNexus's

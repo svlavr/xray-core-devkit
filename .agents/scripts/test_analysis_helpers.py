@@ -80,16 +80,19 @@ class AnalysisHelperTests(unittest.TestCase):
                 package_map.main(["--repo", str(self.root), "--out", str(output)])
         self.assertFalse(output.exists())
 
-    def test_reference_normalization_is_method_and_version_specific(self):
-        text = "The object has 1 references\nLocated in the file: sample.go\nThe reference is located on line 0, which has content type Value struct{}"
+    def test_reference_prose_is_preserved_and_unknown_version_is_rejected(self):
+        text = "The object has 1 references\nLocated in the file: sample.go\nThe reference is located on line 1, which has content type Value struct{}"
         message = {"result": {"content": [{"type": "text", "text": text}]}}
         self.assertEqual(go_mcp.normalize(message, "go_file_context")["result"]["content"][0]["text"], text)
         normalized = go_mcp.normalize(message, "go_symbol_references")
+        self.assertEqual(normalized["result"]["content"][0]["text"], text)
+        diagnostic = {"result": {"range": {"start": {"line": 0, "character": 0}}}}
+        self.assertEqual(go_mcp.normalize(diagnostic, "go_diagnostics")["result"]["range"]["start"]["line"], 0)
         self.assertEqual(inspect_go.parse_references(normalized), [{"file": "sample.go", "line": 1}])
         binary = self.root / "gopls"
         binary.touch()
-        with patch.object(go_mcp, "run", return_value=subprocess.CompletedProcess([], 0, "golang.org/x/tools/gopls v0.24.0\n")), patch.object(go_mcp, "Relay") as relay:
-            with self.assertRaisesRegex(RuntimeError, "v0.23.0"):
+        with patch.object(go_mcp, "run", return_value=subprocess.CompletedProcess([], 0, "golang.org/x/tools/gopls v0.25.0\n")), patch.object(go_mcp, "Relay") as relay:
+            with self.assertRaisesRegex(RuntimeError, "v0.24.0"):
                 go_mcp.main(["--binary", str(binary), "--repo", str(self.root)])
             relay.assert_not_called()
 
@@ -99,7 +102,7 @@ class AnalysisHelperTests(unittest.TestCase):
         selected = {'GOWORK': str(self.root / 'foreign.work'), 'GOOS': 'android',
                     'GOARCH': 'arm64', 'CGO_ENABLED': '0', 'GOFLAGS': '-tags=selected'}
         with patch.dict(os.environ, selected), \
-             patch.object(go_mcp, 'run', return_value=subprocess.CompletedProcess([], 0, 'golang.org/x/tools/gopls v0.23.0\n')) as runner, \
+             patch.object(go_mcp, 'run', return_value=subprocess.CompletedProcess([], 0, 'golang.org/x/tools/gopls v0.24.0\n')) as runner, \
              patch.object(go_mcp, 'Relay') as relay, \
              patch.object(go_mcp.sys, 'stdin'), patch.object(go_mcp.sys, 'stdout'):
             self.assertEqual(go_mcp.main(['--binary', str(binary), '--repo', str(self.root)]), 0)

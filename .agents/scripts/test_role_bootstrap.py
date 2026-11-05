@@ -50,6 +50,7 @@ class LaunchTests(unittest.TestCase):
         for key in ('sandbox_mode','approval_policy','model_provider'):self.assertNotIn(key,config)
 
     def test_bound_root_and_competency_win_without_changing_permission_flags(self):
+        self.assertEqual(bootstrap.clean_arguments(['--dangerously-bypass-hook-trust','resume','--dangerously-bypass-hook-trust=true','session']),['resume','session'])
         inherited=['--dangerously-bypass-approvals-and-sandbox','--sandbox','workspace-write']
         args=['resume','session','--cd','/stale','-C/stale','--model=stale',
               '-c','model="stale"','-c','features.shell_tool=true',*inherited]
@@ -66,7 +67,7 @@ class LaunchTests(unittest.TestCase):
             self.assertEqual(bootstrap.clean_arguments([*option,'resume','key']),['resume','key'])
         self.assertEqual(bootstrap.clean_arguments(['-c','model_context_window=872000']),['-c','model_context_window=872000'])
 
-    def fixture(self, root):
+    def fixture(self, root,city=None):
         source=root/'source';source.mkdir()
         files={
             'go.mod':b'module github.com/xtls/xray-core\n',
@@ -90,11 +91,12 @@ class LaunchTests(unittest.TestCase):
         run_root=root/'runs'
         for task in tasks:(run_root/task['key']/'transient').mkdir(parents=True)
         native_hooks=b'{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"fixture native hook"}]}]}}'
+        if city is not None:native_hooks=json.dumps(runtime_hooks.reviewed_document(city)).encode()
         launches,manifest=batch.freeze_launches(target,target.as_posix(),tasks,'a'*40,lambda task:['/frozen-source/current'],source,
-            run_root=run_root.as_posix(),run_directory=run_root,native_hooks=native_hooks)
+            run_root=run_root.as_posix(),run_directory=run_root,native_hooks=native_hooks,city=city)
         return source,target,tasks,launches,manifest
 
-    def execute(self, task, binding, argv=(), runner=None, store_ref='city'):
+    def execute(self, task, binding, argv=(), runner=None, store_ref='city',city=None):
         item={'id':task,'status':'open','assignee':None,'metadata':{
             'mu.launch_path':binding['path'],'mu.launch_sha256':binding['sha256'],'mu.task_hash':'task-hash'}}
         calls=[]
@@ -105,7 +107,7 @@ class LaunchTests(unittest.TestCase):
         with patch.object(bootstrap,'entry_for',side_effect=lambda key:copy.deepcopy(item)), \
              patch.object(bootstrap,'gc',side_effect=gc), \
              patch.object(resource_guard,'run',side_effect=runner,return_value=subprocess.CompletedProcess([],0)) as run, \
-             patch.dict(os.environ,{'GC_SESSION_ID':'session-one','GC_TRIGGER_BEAD_STORE_REF':store_ref,'GC_CITY':'/fixture/city'}):
+             patch.dict(os.environ,{'GC_SESSION_ID':'session-one','GC_TRIGGER_BEAD_STORE_REF':store_ref,'GC_CITY':city or '/fixture/city'}):
             result=bootstrap.bound_launch(task,binding['path'],binding['sha256'],list(argv))
         return result,run,calls
 
@@ -331,5 +333,20 @@ class LaunchTests(unittest.TestCase):
     def test_explicit_invalid_role_has_no_legacy_fallback(self):
         with self.assertRaises(ValueError):batch.tooling_inputs({'kind':'review','role':'not-a-role'})
 
+
+    def test_new_launch_city_binds_known_template_and_exact_invocation_hashes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            city='/srv/reviewed-city';_,target,_,bindings,_=self.fixture(Path(directory),city=city)
+            launch=json.loads(Path(bindings['one']['path']).read_bytes())
+            self.assertEqual(launch['city'],city)
+            result,run,_=self.execute('mc-current',bindings['one'],city=city)
+            self.assertEqual(result,0)
+            command=run.call_args.args[0]
+            overrides=[command[index+1] for index,value in enumerate(command[:-1]) if value=='-c']
+            state=tomllib.loads(next(value for value in overrides if value.startswith('hooks=')))['hooks']['state']
+            source=str(target/'tooling/one/.codex/hooks.json')
+            self.assertEqual(state,{source+':'+key:{'trusted_hash':value} for key,value in runtime_hooks.reviewed_hashes(city).items()})
+            with self.assertRaisesRegex(RuntimeError,'city differs from native trigger city'):
+                self.execute('mc-current',bindings['one'],city='/srv/wrong-city')
 
 if __name__=='__main__':unittest.main()

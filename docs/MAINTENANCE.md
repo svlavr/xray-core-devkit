@@ -52,7 +52,7 @@ For these tests, a synthetic fixture can contain only a `go.mod` declaring
 `module github.com/xtls/xray-core` and its initial Git commit. Setup requires an
 existing tools directory. Tests supply their own temporary source/protocol
 fixtures; a successful run does not qualify the synthetic fixture as Xray.
-The optional real gopls case additionally needs Go and pinned gopls `v0.23.0`.
+The optional real gopls case additionally needs Go and pinned gopls `v0.24.0`.
 
 From that configured disposable source root, select the real adapter binary if
 it is installed outside PATH:

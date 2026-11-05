@@ -116,18 +116,42 @@ class WorkerGuardTests(unittest.TestCase):
             self.assertEqual(outside.read_text(),'preserve me')
             self.assertFalse((marker.parent/'context.json').exists())
 
-    def test_new_gopls_version_cannot_use_old_line_normalization(self):
+    def test_unqualified_gopls_version_is_rejected_before_backend_start(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);(root/'go.mod').write_text('module test\n')
             script=Path(__file__).with_name('go_mcp.py')
             argv=[str(script),'--binary',sys.executable,'--root',str(root)]
-            with patch.object(sys,'argv',argv), \
-                 patch('resource_guard.run',return_value=subprocess.CompletedProcess([],0,'golang.org/x/tools/gopls v0.24.0\n','')), \
-                 patch('subprocess.Popen') as spawn:
-                with self.assertRaisesRegex((SystemExit,RuntimeError),'requires gopls v0.23.0'):
-                    runpy.run_path(str(script),run_name='__main__')
-                spawn.assert_not_called()
+            for version in ('golang.org/x/tools/gopls v0.22.0\n','golang.org/x/tools/gopls v0.25.0\n','unknown gopls build\n'):
+                with self.subTest(version=version),patch.object(sys,'argv',argv), \
+                     patch('resource_guard.run',return_value=subprocess.CompletedProcess([],0,version,'')), \
+                     patch('subprocess.Popen') as spawn:
+                    with self.assertRaisesRegex((SystemExit,RuntimeError),'requires qualified gopls v0.23.0 or v0.24.0'):
+                        runpy.run_path(str(script),run_name='__main__')
+                    spawn.assert_not_called()
 
+
+    def test_qualified_reference_conversion_is_versioned_and_diagnostics_are_unchanged(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);(root/'go.mod').write_text('module test\n')
+            script=Path(__file__).with_name('go_mcp.py')
+            argv=[str(script),'--binary',sys.executable,'--root',str(root)]
+            for version,expected in (('v0.23.0',4),('v0.24.0',3)):
+                with self.subTest(version=version),patch.object(sys,'argv',argv), \
+                     patch('resource_guard.run',return_value=subprocess.CompletedProcess([],0,'golang.org/x/tools/gopls '+version+'\n','')), \
+                     patch('resource_guard.Relay') as relay:
+                    with self.assertRaises(SystemExit) as exited:
+                        runpy.run_path(str(script),run_name='__main__')
+                    self.assertEqual(exited.exception.code,0)
+                    transform=relay.call_args.kwargs['transform']
+                    response={'result':{'content':[{'type':'text','text':'The reference is located on line 3, which has content Ж🙂'}]}}
+                    self.assertIn('line '+str(expected)+',',transform(response,'go_symbol_references')['result']['content'][0]['text'])
+                    diagnostics={'result':{'content':[{'type':'text','text':'The reference is located on line 3, which has content diagnostic sentinel'}]}}
+                    expected_diagnostics=json.loads(json.dumps(diagnostics))
+                    self.assertEqual(transform(diagnostics,'go_diagnostics'),expected_diagnostics)
+                    instructions=transform({'result':{}},'initialize')['result']['instructions']
+                    self.assertIn('Qualified gopls '+version,instructions)
+                    self.assertIn('normalized by this adapter' if version=='v0.23.0' else 'native one-based',instructions)
+                    relay.return_value.serve.assert_called_once()
 
     def test_explicit_mcp_layer_keeps_frozen_adapter_and_actual_source_root(self):
         config={'developer_instructions':'already combined','approval_policy':'never','sandbox_mode':'read-only',

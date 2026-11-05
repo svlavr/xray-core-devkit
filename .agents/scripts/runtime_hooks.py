@@ -9,7 +9,7 @@ import subprocess
 import threading
 import time
 
-# Reviewed GC v1.5.0 command bodies. City is a validated host value, never a
+# Reviewed GC v1.5.1 command bodies. City is a validated host value, never a
 # personal path copied into this bundle. Native identity hashing follows pinned
 # Codex config/fingerprint.rs and hooks/engine/discovery.rs (runtime-lock version).
 EVENTS={'PreCompact':'pre_compact','SessionStart':'session_start','UserPromptSubmit':'user_prompt_submit'}
@@ -17,11 +17,14 @@ PREFIX='export PATH="$HOME/go/bin:$HOME/.local/bin:$PATH" && '
 
 
 def reviewed_document(city):
+    """The reviewed GC 1.5.1 template, bound to one explicit Linux city."""
     city=str(city)
     if (not re.fullmatch(r'/[A-Za-z0-9_./-]+',city) or '..' in PurePosixPath(city).parts
             or str(PurePosixPath(city))!=city or city.startswith('//') or city=='/'):
         raise ValueError('Hook city requires a canonical shell-safe Linux path')
-    command='gc --city '+city+' '
+    # GC 1.5.1 internal/shellquote.Quote always uses single quotes. The
+    # validated city alphabet excludes quotes, so its exact output is bounded.
+    command="gc --city '"+city+"' "
     commands={
         'PreCompact':[command+'handoff --auto --hook-format codex "context cycle"'],
         'SessionStart':['GC_MANAGED_SESSION_HOOK=1 GC_HOOK_EVENT_NAME=SessionStart '+command+'prime --hook --hook-format codex'],
@@ -34,7 +37,7 @@ def reviewed_document(city):
 
 
 def native_fingerprint(value):
-    """Pinned Codex version_for_toml canonical JSON identity fingerprint."""
+    """Pinned Codex 0.166 version_for_toml canonical JSON fingerprint."""
     encoded=json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=False).encode('utf-8')
     return 'sha256:'+hashlib.sha256(encoded).hexdigest()
 
@@ -43,27 +46,36 @@ def reviewed_hashes(city):
     result={}
     for event,groups in reviewed_document(city)['hooks'].items():
         for index,handler in enumerate(groups[0]['hooks']):
-            # Pinned native discovery retains PreCompact's empty matcher and
-            # SessionStart's startup matcher; UserPromptSubmit has no matcher.
-            # The normalized timeout is 600 seconds; all handlers are synchronous.
             identity={'event_name':EVENTS[event],'hooks':[{**handler,'timeout':600,'async':False}]}
+            # Native discovery preserves PreCompact's explicit empty matcher,
+            # startup for SessionStart, and no matcher for UserPromptSubmit.
             if event=='PreCompact' or groups[0]['matcher']:identity['matcher']=groups[0]['matcher']
             result[EVENTS[event]+':0:'+str(index)]=native_fingerprint(identity)
     return result
 
 
+def reviewed_source(root,city):
+    target=root/'.codex/hooks.json'
+    if target.resolve()!=target.absolute() or not target.is_file() or target.stat().st_nlink!=1:
+        raise RuntimeError('Hook settings must be an existing unaliased file')
+    raw=target.read_bytes()
+    def unique(pairs):
+        if len(dict(pairs))!=len(pairs):raise RuntimeError('Duplicate JSON hook keys are not reviewed')
+        return dict(pairs)
+    if json.loads(raw,object_pairs_hook=unique)!=reviewed_document(city):
+        raise RuntimeError('Existing hooks differ from the exact reviewed template; review required')
+    return hashlib.sha256(raw).hexdigest()
+
+
 def prepare_hooks(root,city):
     expected=reviewed_document(city)
     target=root/'.codex/hooks.json'
-    if target.resolve()!=target.absolute():
-        raise RuntimeError('Hook settings must not alias another path')
+    if target.resolve()!=target.absolute():raise RuntimeError('Hook settings must not alias another path')
     if target.exists():
-        if target.is_symlink() or target.stat().st_nlink!=1 or json.loads(target.read_text())!=expected:
-            raise RuntimeError('Existing hooks differ from the exact reviewed template; review required')
+        reviewed_source(root,city)
     else:
         target.parent.mkdir(parents=True,exist_ok=True)
-        with target.open('x',encoding='utf-8') as handle:
-            handle.write(json.dumps(expected,indent=2)+'\n')
+        with target.open('x',encoding='utf-8') as handle:handle.write(json.dumps(expected,indent=2)+'\n')
 
 
 def approved_state(root,response,city=None):
@@ -71,18 +83,26 @@ def approved_state(root,response,city=None):
     entries=response.get('data',[])
     if len(entries)!=1 or entries[0].get('cwd')!=str(root) or entries[0].get('errors') or entries[0].get('warnings'):
         raise RuntimeError('Cannot establish the exact native hook inventory')
-    hooks=entries[0].get('hooks',[]);expected={source+':'+k:v for k,v in reviewed_hashes(city or root).items()}
+    group=reviewed_hashes(city or root)
+    hooks=entries[0].get('hooks',[]);expected={source+':'+k:v for k,v in group.items()}
     if len(hooks)!=len(expected) or {h['key']:h.get('currentHash') for h in hooks}!=expected:
         raise RuntimeError('Generated hooks differ from the reviewed Gas City template; review required')
     if any(h.get('sourcePath')!=source or h.get('source')!='project' or h.get('handlerType')!='command'
-           or not h.get('enabled') or h.get('pluginId') for h in hooks):
+           or h.get('enabled') is not True or h.get('pluginId') is not None for h in hooks):
         raise RuntimeError('Unexpected hook source or handler')
-    return {h['key']:{'trusted_hash':h['currentHash']} for h in hooks if h.get('trustStatus')!='trusted'}
+    return {h['key']:{'trusted_hash':expected[h['key']]} for h in hooks if h.get('trustStatus')!='trusted'}
 
 
-def _trust(root,city):
+def _trust(root,city=None):
+    city=city or root
+    if root.resolve()!=root.absolute():raise RuntimeError('Hook root must not alias another path')
     root=root.resolve()
-    prepare_hooks(root,city)
+    if city is not None:
+        prepare_hooks(root,city)
+        initial=reviewed_source(root,city)
+    def unchanged():
+        if city is not None and reviewed_source(root,city)!=initial:
+            raise RuntimeError('Hook source changed during native trust configuration')
     proc=subprocess.Popen(['/usr/local/bin/codex','-C',str(root),'app-server','--stdio'],
         stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,text=True,encoding='utf-8')
     replies=queue.Queue()
@@ -103,13 +123,16 @@ def _trust(root,city):
                 return reply['result']
     try:
         call(1,'initialize',{'clientInfo':{'name':'mu_runtime_hooks','version':'1'},'capabilities':{'experimentalApi':True}})
+        unchanged()
         changes=approved_state(root,call(2,'hooks/list',{'cwds':[str(root)]}),city)
+        unchanged()
         if changes:
             call(3,'config/batchWrite',{'edits':[{'keyPath':'hooks.state','value':changes,'mergeStrategy':'upsert'}],
                                       'reloadUserConfig':True})
         remaining=approved_state(root,call(4,'hooks/list',{'cwds':[str(root)]}),city)
+        unchanged()
         if remaining:raise RuntimeError('Native hook trust did not persist')
-        return {'root':str(root),'reviewed_hooks':4,'newly_trusted':len(changes)}
+        return {'root':str(root),'city':str(city) if city is not None else None,'reviewed_hooks':4,'newly_trusted':len(changes)}
     finally:
         proc.terminate()
         try:proc.wait(timeout=5)

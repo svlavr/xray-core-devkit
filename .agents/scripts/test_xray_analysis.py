@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -12,16 +13,10 @@ from unittest.mock import patch
 import zipfile
 
 import xray_analysis as analysis
-from resource_guard import CancelledError, run as guarded_run
+from resource_guard import CancelledError, run as guarded_run, ManagedProcess, stop
 
 
 class GraphContractTests(unittest.TestCase):
-    def test_recorded_node_precedes_path_and_explicit_override_precedes_recorded(self):
-        with patch.dict(os.environ, {}, clear=True), patch.object(analysis, 'host', return_value={'node': 'recorded-node'}), patch('shutil.which', return_value='path-node'):
-            self.assertEqual(analysis.node_executable(), 'recorded-node')
-            with patch.dict(os.environ, {'XRAY_ANALYSIS_NODE': 'explicit-node'}):
-                self.assertEqual(analysis.node_executable(), 'explicit-node')
-
     def test_build_profile_matches_bundled_helpers_and_uses_recorded_executables(self):
         from package_map import build_environment
         with patch.dict(os.environ, {'GOWORK': 'inherited.work', 'CGO_ENABLED': '1'}), patch.object(analysis, 'host', return_value={'git_executable': 'recorded-git', 'go': 'recorded-go'}):
@@ -31,6 +26,12 @@ class GraphContractTests(unittest.TestCase):
                 self.assertEqual(env[key], expected[key])
             self.assertEqual(env['XRAY_ANALYSIS_GIT'], 'recorded-git')
             self.assertEqual(env['XRAY_ANALYSIS_GO'], 'recorded-go')
+
+    def test_recorded_node_precedes_path_and_explicit_override_precedes_recorded(self):
+        with patch.dict(os.environ, {}, clear=True), patch.object(analysis, 'host', return_value={'node': 'recorded-node'}), patch('shutil.which', return_value='path-node'):
+            self.assertEqual(analysis.node_executable(), 'recorded-node')
+            with patch.dict(os.environ, {'XRAY_ANALYSIS_NODE': 'explicit-node'}):
+                self.assertEqual(analysis.node_executable(), 'explicit-node')
 
     def test_cancelled_refresh_does_not_enter_owner_or_publish(self):
         cancelled=threading.Event();cancelled.set()
@@ -72,13 +73,16 @@ class GraphContractTests(unittest.TestCase):
         index = self.cache / 'index'
         registry = self.cache / 'registry'
         index.mkdir(); registry.mkdir()
-        (index / 'meta.json').write_text('{}')
+        (index / 'meta.json').write_text(json.dumps({'storagePath': str(index), 'repoPath': str(self.cache/'source')}))
         (index / 'lbug').touch()
-        (registry / 'registry.json').write_text('{}')
+        (registry / 'registry.json').write_text(json.dumps([{'storagePath': str(index), 'path': str(self.cache/'source')}]))
         manifest = {**self.state, 'head': 'indexed-head',
+                    'identity': {'schema': 2, 'analyzer': 'test', 'export': 'test'},
+                    'snapshot': str(self.cache/'source'),
                     'index': str(index), 'registry_home': str(registry)}
         (self.cache / 'graph.json').write_text(json.dumps(manifest))
         for mocker in [patch.object(analysis, 'cache_root', return_value=self.cache),
+                       patch.object(analysis, 'graph_identity', return_value=manifest['identity']),
                        patch.object(analysis, 'source_state', side_effect=lambda **kwargs: self.state.copy())]:
             mocker.start(); self.addCleanup(mocker.stop)
 
@@ -97,6 +101,55 @@ class GraphContractTests(unittest.TestCase):
     def test_missing_index_storage_cannot_be_current(self):
         (self.cache / 'index/lbug').unlink()
         self.assertEqual(analysis.graph_status()['status'], 'STALE')
+
+    def test_analyzer_export_or_schema_change_invalidates_matching_source(self):
+        for field in ('schema', 'analyzer', 'export'):
+            identity = analysis.graph_identity().copy()
+            identity[field] = 'changed'
+            with self.subTest(field=field), patch.object(analysis, 'graph_identity', return_value=identity):
+                self.assertEqual(analysis.graph_status()['status'], 'STALE')
+
+    def test_corrupt_storage_metadata_is_never_ready(self):
+        (self.cache/'index/meta.json').write_text('{partial')
+        self.assertEqual(analysis.graph_status()['status'], 'STALE')
+
+    def test_force_reaches_builder_for_current_source(self):
+        def build(before, identity, base, deadline, cancelled, report):
+            report('ready', state='CURRENT')
+            return analysis.graph_status()
+        with patch.object(analysis, '_build_graph', side_effect=build) as builder:
+            self.assertEqual(analysis.refresh_graph()['status'], 'CURRENT')
+            builder.assert_not_called()
+            self.assertEqual(analysis.refresh_graph(force=True)['status'], 'CURRENT')
+            builder.assert_called_once()
+
+    def test_failed_identity_is_latched_until_deliberate_force(self):
+        manifest=json.loads((self.cache/'graph.json').read_text())
+        manifest['fingerprint']='old-source'
+        (self.cache/'graph.json').write_text(json.dumps(manifest))
+        with patch.object(analysis, '_build_graph', side_effect=RuntimeError('analyzer failed')) as builder:
+            with self.assertRaisesRegex(RuntimeError, 'analyzer failed'):analysis.refresh_graph()
+            with self.assertRaisesRegex(RuntimeError, 'Previous graph preparation failed'):analysis.refresh_graph()
+            self.assertEqual(builder.call_count,1)
+            with self.assertRaisesRegex(RuntimeError, 'analyzer failed'):analysis.refresh_graph(force=True)
+            self.assertEqual(builder.call_count,2)
+
+    def test_exit_zero_incomplete_analyzer_preserves_previous_manifest(self):
+        before=(self.cache/'graph.json').read_bytes()
+        def command(arguments, **kwargs):
+            archive=next((part.split('=',1)[1] for part in arguments if str(part).startswith('--output=')),None)
+            if archive:
+                with zipfile.ZipFile(archive,'w') as output:output.writestr('core/a.go','package core')
+            else:
+                kwargs['stdout'].write('visible partial analyzer output\n')
+                kwargs['stdout'].flush()
+            return subprocess.CompletedProcess(arguments,0)
+        with patch.object(analysis,'committed_source_paths',return_value=('core',)), patch.object(analysis,'guarded_run',side_effect=command):
+            with self.assertRaisesRegex(RuntimeError,'complete index'):analysis.refresh_graph(force=True)
+        self.assertEqual((self.cache/'graph.json').read_bytes(),before)
+        progress=analysis.graph_progress()
+        self.assertEqual(progress['state'],'FAILED')
+        self.assertIn('visible partial analyzer output',Path(progress['log']).read_text())
 
     def test_parallel_clients_share_one_refresh(self):
         done = threading.Event()
@@ -120,6 +173,42 @@ class GraphContractTests(unittest.TestCase):
         self.assertTrue(all(r['status'] == 'CURRENT' for r in results))
         self.assertTrue((self.cache / 'graph-refresh.lock').is_file())
 
+    def test_distinct_frontends_force_once_and_join_same_checkout_lease(self):
+        script=self.cache/'client.py'
+        script.write_text('''import sys,time,json,pathlib,os
+sys.path.insert(0,__SCRIPTS__)
+import xray_analysis as a
+base=pathlib.Path(__BASE__)
+a.cache_root=lambda:base
+def status(**kwargs):
+ return {'status':'CURRENT','manifest':{'index':'new' if (base/'done').exists() else 'old'}}
+def build(**kwargs):
+ with (base/'builds').open('a') as handle:handle.write(str(os.getpid())+'\\n')
+ time.sleep(.4)
+ (base/'done').touch()
+ return status()
+a.graph_status=status;a._refresh_graph_unlocked=build
+(base/('ready-'+sys.argv[1])).touch()
+while not (base/'start').exists():time.sleep(.01)
+print(json.dumps(a.refresh_graph(force=True)),flush=True)
+'''.replace('__SCRIPTS__',repr(str(Path(analysis.__file__).parent))).replace('__BASE__',repr(str(self.cache))))
+        processes=[]
+        for number in range(2):
+            process=ManagedProcess([sys.executable,str(script),str(number)],stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,encoding='utf-8',
+                transient=self.cache/'transient',env={**os.environ,'PYTHONDONTWRITEBYTECODE':'1'})
+            processes.append(process);self.addCleanup(lambda p=process:stop(p))
+        deadline=time.monotonic()+4
+        while not all((self.cache/('ready-'+str(number))).exists() for number in range(2)):
+            if time.monotonic()>deadline:self.fail('Frontend fixture failed to initialize')
+            time.sleep(.01)
+        (self.cache/'start').touch()
+        for process in processes:
+            output,error=process.communicate(timeout=5)
+            self.assertEqual(process.returncode,0,error)
+            self.assertEqual(json.loads(output)['manifest']['index'],'new')
+        self.assertEqual(len((self.cache/'builds').read_text().splitlines()),1)
+
     def test_failed_refresh_releases_ownership_without_replacing_manifest(self):
         before = (self.cache / 'graph.json').read_bytes()
         with patch.object(analysis, 'graph_status', return_value={'status': 'STALE'}), \
@@ -130,6 +219,15 @@ class GraphContractTests(unittest.TestCase):
         with patch.object(analysis, 'graph_status', return_value={'status': 'STALE'}), \
              patch.object(analysis, '_refresh_graph_unlocked', return_value={'status': 'CURRENT'}):
             self.assertEqual(analysis.refresh_graph()['status'], 'CURRENT')
+
+
+    def test_force_joins_generation_published_just_before_lock_acquisition(self):
+        old={'status':'CURRENT','manifest':{'index':'old'}}
+        ready={'status':'CURRENT','manifest':{'index':'new'}}
+        with patch.object(analysis,'graph_status',side_effect=[old,ready]), \
+             patch.object(analysis,'_refresh_graph_unlocked') as refresh:
+            self.assertEqual(analysis.refresh_graph(force=True),ready)
+            refresh.assert_not_called()
 
 
 class CommittedArchiveTests(unittest.TestCase):
@@ -195,7 +293,7 @@ class CommittedArchiveTests(unittest.TestCase):
                   'dirty': '', 'uncovered_go': [], 'workspace_files': []}
         with patch.object(analysis, 'ROOT', self.repo), \
              patch.object(analysis, 'cache_root', return_value=self.repo / '.local/graph-cache'), \
-             patch.object(analysis, 'graph_status', return_value={'status': 'MISSING', 'source': before}), \
+             patch.object(analysis, 'graph_status', return_value={'status': 'MISSING', 'source': before, 'identity': {'schema':2,'analyzer':'fixture','export':'fixture'}}), \
              patch.object(analysis, 'node_executable', return_value='fixture-analyzer'), \
              patch.object(analysis, 'guarded_run', side_effect=execute):
             with self.assertRaisesRegex(RuntimeError, 'Graph failed'):

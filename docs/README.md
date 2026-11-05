@@ -31,6 +31,8 @@ write set and Git policy through [project scope](PROJECT_SCOPE.md).
 - [Project scope](PROJECT_SCOPE.md): owner-supplied inputs and work authority.
 - [Workflow and evidence](WORKFLOW.md): ownership, independent review, focused
   validation, source accounting and checkpoint boundaries.
+- [Task-selected agent operations](AGENT_OPERATIONS.md): detailed role/routing,
+  evidence, host/access and resource policy selected by the compact agent pack.
 - [Go and MCP analysis](ANALYSIS.md): references, imports, syntax, reachability,
   graph freshness and process lifetime.
 - [Accounting and source export](ACCOUNTING_AND_EXPORT.md): owner catalogs,
@@ -94,7 +96,7 @@ Main keeps the human-selected primary model and owns integration, validation
 and Git. Nineteen domain roles provide bounded assignments:
 
 - [mu_explorer](../.codex/agents/mu_explorer.toml): one narrow read-only code path;
-  `gpt-6-luna`, high.
+  `gpt-6-luna`, high; apps/plugins/memories disabled for this narrow profile only.
 - [mu_investigator](../.codex/agents/mu_investigator.toml): one bounded technical
   question spanning files or subsystems; `gpt-6.1-sol`, high.
 - [mu_upstream_researcher](../.codex/agents/mu_upstream_researcher.toml): external,

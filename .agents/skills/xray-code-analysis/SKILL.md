@@ -49,14 +49,17 @@ means the combined evidence is not consistent. It reads saved disk files.
 The configured `xray_gopls_windows` and opt-in `xray_gopls_android` profiles can
 be used directly when their tools are available. Confirm `go_workspace` matches this checkout once per
 task/profile. Profiles explicitly use CGO=0 and no extra tags. For Linux or extra
-tags, use `--profile linux` / `--tags` in the CLI. The pinned adapter converts gopls v0.23.0 reference
-line prose to one-based lines. Do not apply that correction a second time.
+tags, use `--profile linux` / `--tags` in the CLI. Fresh provisioning pins gopls v0.24.0. The adapter preserves its native
+one-based reference prose and supports retained v0.23.0 binaries with one
+version-specific increment. Never apply another correction. Initialization reports
+the actual selected binary version; unknown versions are refused. Diagnostics
+retain upstream zero-based protocol locations.
 The MCP subset does not expose all gopls LSP operations; use the installed
 native gopls CLI/LSP for an exact implementation or hierarchy query when needed.
 
 ## Structural search
 
-The dependency lock pins ast-grep 0.45.3. Provisioning places its Windows binary
+The dependency lock pins ast-grep 0.51.1. Provisioning places its Windows binary
 at `<analysis-tools-root>/bin/ast-grep.exe`; confirm that installation before use.
 Use read-only `run`, `scan` and `outline`; validate a query on a known positive
 case before treating zero matches as evidence. No rewrites are implied.
@@ -110,9 +113,40 @@ source review. Even an intersection of platform reports is not deletion proof.
 Graph snapshots are supplementary. Project caches are keyed by canonical checkout;
 their manifest records HEAD, a source fingerprint, excluded paths and coverage.
 Run `python .agents/scripts/xray_analysis.py graph-status` when graph evidence is
-needed. On MISSING/STALE with committed source, run `graph-refresh` automatically
-on demand and retry that MCP call; it opens the new manifest automatically and
-reuses its backend for subsequent queries. No startup refresh is performed.
+needed. A cold semantic MCP call starts or joins an owned preparation and returns
+`PREPARING` with a ticket retaining its exact original tool and arguments. Call
+`graph_wait(ticket=..., timeout_seconds=30)` repeatedly until it returns the actual
+original query result or a concrete failure. Pending preparation is not a semantic
+answer or a reason to abandon the map. Completed/terminal ticket responses are
+cached and may be evicted at the bounded capacity; retained results remain
+retrievable after a later preparation and carry explicit historical ticket
+metadata. Each wait is bounded independently; the
+preparation has a separate hard budget (default 900 seconds, maximum 1200).
+`graph_prepare(timeout_seconds=..., force=false)` explicitly starts/joins preparation;
+`graph_status` reports validated readiness plus owner phase, elapsed time and log.
+`graph_cancel(preparation_id=...)` cancels only this frontend's exact preparation;
+cancelling a wait leaves preparation running. Another frontend joins the existing
+checkout lease and observes its owner. Owner shutdown cancels its analyzer; a
+joining frontend can recover the lease without publishing incomplete output.
+Analyzer launches
+publish a durable nonce/birth-bound custody claim before spawning; the next owner
+fences delayed launches and verifies the exact old tree is gone before admission.
+This closes the frontend-death gap between lease release and descendant cleanup.
+`list_repos` is cheap inventory and never prepares or validates semantic freshness.
+No startup refresh is performed.
+
+CLI preparation streams phase/elapsed updates to stderr and analyzer output to the
+reported log while it runs: `python .agents/scripts/xray_analysis.py graph-refresh
+--prepare-seconds 900`. A failed source/analyzer identity is latched to prevent
+identical automatic cold retries. Inspect its failure/log, then deliberately use
+`graph_prepare(force=true)` or CLI `graph-refresh --force` after correcting the
+cause. Force rebuilds a current index too; concurrent callers coalesce at the
+same lease. The previous immutable manifest remains intact if a new build fails.
+Manifests bind export policy/schema, installed GitNexus version/build, lockfile,
+and selected tree-sitter/Ladybug runtime artifacts. Their cached file signatures
+track ordinary installed updates; this is not attestation of every dependency or
+protection against byte changes preserving file metadata. Reconnect a fresh
+frontend after changing launcher code. Completed generations reuse their backend.
 Dirty source uses live gopls/AST; a committed graph must not answer as current.
 Missing cache storage, new uncovered Go roots and go.work workspaces also prevent
 a current graph claim. Multi-module graph coverage requires a named scope update;

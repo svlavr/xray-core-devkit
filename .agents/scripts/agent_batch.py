@@ -188,9 +188,16 @@ def tooling_inputs(task, root=ROOT):
     return assignment,files
 
 
-def freeze_launches(directory,linux,tasks,head,source_dirs,root=ROOT,*,run_root,run_directory,native_hooks):
+def freeze_launches(directory,linux,tasks,head,source_dirs,root=ROOT,*,run_root,run_directory,native_hooks,city=None):
     """Materialize hash-bound, job-private inputs before native task creation."""
     from worker_context import adviser_configuration
+    if city is not None:
+        from runtime_hooks import reviewed_document
+        def unique(pairs):
+            if len(dict(pairs))!=len(pairs):raise RuntimeError('Duplicate JSON hook keys are not reviewed')
+            return dict(pairs)
+        if json.loads(native_hooks,object_pairs_hook=unique)!=reviewed_document(city):
+            raise RuntimeError('Native hooks differ from the reviewed explicit city template')
     if Path(run_directory).resolve().is_relative_to(directory.resolve()):
         raise ValueError('Mutable job state must be outside the frozen input snapshot')
     launches={};all_files={}
@@ -221,6 +228,7 @@ def freeze_launches(directory,linux,tasks,head,source_dirs,root=ROOT,*,run_root,
             'mode':task.get('kind'),'files':manifest,'body':task['body']+'\n\nRouting/handoff evidence:\n'+
             json.dumps({k:v for k,v in task.items() if k not in ('body','sources')},ensure_ascii=False),
             'escalation':{k:task.get(k) for k in ('previous_model','blocker','discriminator','evidence')}}
+        if city is not None:launch['city']=str(city)
         raw=encoded(launch)+b'\n';name=prefix+'/launch.json';(directory/name).write_bytes(raw)
         all_files[name]={'sha256':digest(raw),'bytes':len(raw)}
         launches[key]={'path':linux+'/'+name,'sha256':digest(raw),'assignment':selected}
@@ -258,7 +266,7 @@ def snapshot(data,packet):
         target=directory/name;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(blob)
     launches,tooling=freeze_launches(directory,linux,packet['jobs'],head,
         lambda task:[linux+'/'+a for a in task['inputs']],run_root=runtime,run_directory=run_directory,
-        native_hooks=native_hooks)
+        native_hooks=native_hooks,city=data['city'])
     if read_worktree(city,'.codex/hooks.json')!=native_hooks:
         raise RuntimeError('Native city hooks changed during snapshot capture')
     manifest.update(tooling)

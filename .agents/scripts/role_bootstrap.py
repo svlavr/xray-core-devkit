@@ -72,13 +72,15 @@ def toml_inline(value):
     raise ValueError('Unsupported invocation trust value')
 
 
-def invocation_trust_args(directory):
+def invocation_trust_args(directory,city=None):
     """Trust only this prepared cwd and the existing four reviewed native hooks."""
-    from runtime_hooks import reviewed_hashes
+    from runtime_hooks import reviewed_hashes,reviewed_source
+    if city is not None:reviewed_source(directory,city)
+    selected_city=city if city is not None else os.environ.get("GC_CITY") or directory
     source=str(directory/'.codex/hooks.json')
     return ['-c','projects='+toml_inline({str(directory):{'trust_level':'trusted'}}),
             '-c','hooks='+toml_inline({'state':{source+':'+key:{'trusted_hash':value}
-                                              for key,value in reviewed_hashes(os.environ.get('GC_CITY') or directory).items()}})]
+                                              for key,value in reviewed_hashes(selected_city).items()}})]
 
 
 def clean_arguments(argv, features=()):
@@ -89,6 +91,8 @@ def clean_arguments(argv, features=()):
     result = []; index = 0
     while index < len(argv):
         item = argv[index]; size = 1; value = None
+        if item=="--dangerously-bypass-hook-trust" or item.startswith("--dangerously-bypass-hook-trust="):
+            index+=1;continue
         if item in ('--model', '-m', '--cd', '-C', '--profile', '-p'):
             index += 2; continue
         if item.startswith(('--model=', '--cd=', '--profile=')) or (item.startswith(('-m','-C','-p')) and not item.startswith('--') and len(item) > 2):
@@ -106,6 +110,11 @@ def clean_arguments(argv, features=()):
 
 def bound_launch(task, path, expected, argv):
     launch = read_launch(path, expected)
+    city=launch.get('city')
+    if city is not None:
+        from runtime_hooks import reviewed_document
+        reviewed_document(city)
+        if os.environ.get('GC_CITY')!=city:raise RuntimeError('Frozen launch city differs from native trigger city')
     assignment = launch['assignment']
     store_ref=launch.get('store_ref','city')
     if store_ref!=trigger_store(task) or (launch['mode']=='implement')!=(store_ref=='rig:mu-core'):
@@ -175,7 +184,7 @@ def bound_launch(task, path, expected, argv):
         'Frozen profile/skills/CODEX_PACK root: ' + str(tooling) + '\n' + launch['body'])
     profile = {**profile, 'developer_instructions': guidance}
     from worker_context import scoped_mcp_args
-    options = ['-C', str(directory), *invocation_trust_args(directory),
+    options = ['-C', str(directory), *invocation_trust_args(directory,city),
                *scoped_mcp_args(config), *configuration_args(profile)]
     receipt = runtime / ('launch-' + task + '.json')
     receipt.parent.mkdir(parents=True, exist_ok=True)

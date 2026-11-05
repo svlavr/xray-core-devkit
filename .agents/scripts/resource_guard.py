@@ -15,6 +15,7 @@ import sys
 import threading
 import time
 import uuid
+from contextlib import contextmanager
 
 ROOT = Path(__file__).absolute().parents[2]
 TRANSIENT = ROOT / '.local/host/transient'
@@ -70,6 +71,147 @@ def lock_file(handle):
     else:
         import fcntl
         fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+
+@contextmanager
+def custody_admission(path):
+    """Brief launch fencing only; never hold this lock over process cleanup."""
+    path = plain_path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with Path(str(path)+'.admission.lock').open('a+b') as handle:
+        deadline = time.monotonic()+10
+        while True:
+            try:
+                lock_file(handle)
+                break
+            except OSError:
+                if time.monotonic() >= deadline:raise TimeoutError('Custody admission lock timed out')
+                time.sleep(.02)
+        try:yield
+        finally:
+            handle.seek(0)
+            if os.name == 'nt':
+                import msvcrt
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+def custody_read(path):
+    try:return json.loads(Path(path).read_text(encoding='utf-8'))
+    except FileNotFoundError:return None
+
+
+def custody_write(path, value):
+    temporary = Path(str(path)+'.'+value['nonce']+'.tmp')
+    temporary.write_text(json.dumps(value), encoding='utf-8')
+    temporary.replace(path)
+
+
+def same_process(pid, token):
+    if os.name == 'nt':
+        kernel = _kernel()
+        handle = kernel.OpenProcess(0x100000 | 0x1000, False, pid)
+        if not handle:return False
+        try:
+            return kernel.WaitForSingleObject(handle, 0) == 258 and _birth(kernel, handle) == token
+        finally:kernel.CloseHandle(handle)
+    try:return process_token(pid) == token
+    except OSError:return False
+
+
+def custody_intent(path):
+    """Publish admission intent before a supervisor process can exist."""
+    with custody_admission(path):
+        previous = custody_read(path)
+        if previous and previous['state'] not in ('COMPLETE', 'ABORTED'):
+            raise RuntimeError('Previous process custody must be reaped before launch')
+        value = {'state': 'LAUNCHING', 'nonce': uuid.uuid4().hex,
+                 'owner': os.getpid(), 'owner_token': process_token(os.getpid())}
+        custody_write(path, value)
+        return value['nonce']
+
+
+def custody_activate(path, nonce):
+    with custody_admission(path):
+        value = custody_read(path)
+        if not value or value['nonce'] != nonce or value['state'] != 'LAUNCHING':return False
+        if not same_process(value['owner'], value['owner_token']):
+            value['state'] = 'ABORTED'
+            custody_write(path, value)
+            return False
+        value.update(state='ACTIVE', supervisor=os.getpid(), supervisor_token=process_token(os.getpid()),
+                     job='xray-custody-'+nonce if os.name == 'nt' else None,
+                     group=os.getpgrp() if os.name != 'nt' else None)
+        custody_write(path, value)
+        return True
+
+
+def custody_empty(value):
+    if same_process(value['supervisor'], value['supervisor_token']):return False
+    if os.name == 'nt':
+        from ctypes import wintypes
+        kernel = _kernel()
+        kernel.OpenJobObjectW.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.LPCWSTR]
+        kernel.OpenJobObjectW.restype = wintypes.HANDLE
+        kernel.QueryInformationJobObject.argtypes = [wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD, ctypes.c_void_p]
+        kernel.TerminateJobObject.argtypes = [wintypes.HANDLE, wintypes.UINT]
+        job = kernel.OpenJobObjectW(0x0004 | 0x0008, False, value['job'])
+        if not job:
+            if ctypes.get_last_error() == 2:return True
+            raise ctypes.WinError(ctypes.get_last_error())
+        class Accounting(ctypes.Structure):
+            _fields_ = [(name, ctypes.c_int64) for name in ('user','kernel','period_user','period_kernel')] + [(name,wintypes.DWORD) for name in ('faults','total','active','terminated')]
+        try:
+            count = Accounting()
+            if not kernel.QueryInformationJobObject(job, 1, ctypes.byref(count), ctypes.sizeof(count), None):
+                raise ctypes.WinError(ctypes.get_last_error())
+            if not count.active:return True
+            # Opening the named job can postpone KILL_ON_JOB_CLOSE. The exact
+            # supervisor birth has ended, so reap only its original named job.
+            if not kernel.TerminateJobObject(job, 125):raise ctypes.WinError(ctypes.get_last_error())
+            return False
+        finally:kernel.CloseHandle(job)
+    try:
+        if process_token(value['supervisor']) != value['supervisor_token']:
+            return True  # Recycled leader implies the original group ended.
+    except OSError:pass
+    members = []
+    for entry in Path('/proc').iterdir():
+        if entry.name.isdigit():
+            try:
+                process_token(int(entry.name))  # Zombies do not hold custody.
+                if os.getpgid(int(entry.name)) == value['group']:members.append(int(entry.name))
+            except OSError:pass
+    if not members:return True
+    try:os.killpg(value['group'], signal.SIGKILL)
+    except ProcessLookupError:pass
+    return False
+
+
+def wait_custody(path, timeout=15, cancelled=None):
+    """Fence delayed launches and prove old descendants gone before admission."""
+    deadline = time.monotonic()+timeout
+    while True:
+        check_cancelled(cancelled)
+        with custody_admission(path):
+            value = custody_read(path)
+            if not value or value['state'] in ('COMPLETE','ABORTED'):return
+            if value['state'] == 'LAUNCHING' and not same_process(value['owner'], value['owner_token']):
+                value['state'] = 'ABORTED'
+                custody_write(path, value)
+                return
+        if value['state'] == 'ACTIVE' and custody_empty(value):
+            with custody_admission(path):
+                current = custody_read(path)
+                if current and current['nonce'] == value['nonce'] and current['state'] == 'ACTIVE':
+                    current.update(state='COMPLETE', completed_at=time.time())
+                    custody_write(path, current)
+            return
+        if time.monotonic() >= deadline:raise TimeoutError('Previous owned process custody has not finished')
+        if cancelled is None:time.sleep(.02)
+        else:cancelled.wait(.02)
 
 
 def clean_stale(base=TRANSIENT):
@@ -143,7 +285,7 @@ def process_token(pid):
     return fields[19]
 
 
-def contain_self():
+def contain_self(name=None):
     """Establish containment before any backend can spawn descendants."""
     if os.name != 'nt':
         return None  # spawn creates a dedicated process group/session.
@@ -164,7 +306,7 @@ def contain_self():
     kernel.SetInformationJobObject.argtypes = [wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD]
     kernel.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
     kernel.GetCurrentProcess.restype = wintypes.HANDLE
-    job = kernel.CreateJobObjectW(None, None)
+    job = kernel.CreateJobObjectW(None, name)
     limits = Extended()
     limits.Basic.Flags = 0x2000  # KILL_ON_JOB_CLOSE; handle is not inherited.
     if not job or not kernel.SetInformationJobObject(job, 9, ctypes.byref(limits), ctypes.sizeof(limits)):
@@ -294,13 +436,19 @@ class MCPOutput:
 
 
 class ManagedProcess(subprocess.Popen):
-    def __init__(self, command, *, cwd=None, env=None, transient=TRANSIENT, **kwargs):
+    def __init__(self, command, *, cwd=None, env=None, transient=TRANSIENT, custody_path=None, **kwargs):
+        self.custody_path = None
         self.transient = plain_path(transient)
         self.transient.mkdir(parents=True, exist_ok=True)
         clean_stale(self.transient)
         launch = [sys.executable, str(Path(__file__).absolute()), '--supervise',
                   json.dumps([str(value) for value in command]), '--transient', str(self.transient),
                   '--owner', str(os.getpid()), '--token', process_token(os.getpid())]
+        if custody_path is not None:
+            custody_path = plain_path(custody_path)
+            nonce = custody_intent(custody_path)
+            self.custody_path, self.custody_nonce = custody_path, nonce
+            launch += ['--custody-path', str(custody_path), '--custody-nonce', nonce]
         for descriptor in kwargs.get('pass_fds', ()):
             launch += ['--keep-fd', str(descriptor)]
         kwargs.pop('start_new_session', None)
@@ -309,10 +457,27 @@ class ManagedProcess(subprocess.Popen):
         for name, stream in [('stdin', sys.stdin), ('stdout', sys.stdout), ('stderr', sys.stderr)]:
             if kwargs.get(name) is None:
                 kwargs[name] = stream
-        super().__init__(launch, cwd=cwd, env=env, start_new_session=os.name != 'nt', **kwargs)
+        try:
+            super().__init__(launch, cwd=cwd, env=env, start_new_session=os.name != 'nt', **kwargs)
+        except BaseException:
+            if custody_path is not None:
+                with custody_admission(custody_path):
+                    value = custody_read(custody_path)
+                    if value and value['nonce'] == nonce and value['state'] == 'LAUNCHING':
+                        value['state'] = 'ABORTED'
+                        custody_write(custody_path, value)
+            raise
 
     def wait(self, timeout=None):
         result = super().wait(timeout=timeout)
+        if self.custody_path is not None:
+            with custody_admission(self.custody_path):
+                value = custody_read(self.custody_path)
+                if value and value['nonce'] == self.custody_nonce and value['state'] == 'LAUNCHING':
+                    # The exact owned launcher has joined; it can never publish
+                    # ACTIVE later, even when initialization failed pre-spawn.
+                    value['state'] = 'ABORTED'
+                    custody_write(self.custody_path, value)
         clean_stale(self.transient)
         return result
 
@@ -597,7 +762,8 @@ def idle_lines(stream, idle_seconds=IDLE_SECONDS):
 
 
 def supervise(args):
-    job = contain_self()
+    job = contain_self('xray-custody-'+args.custody_nonce if args.custody_path else None)
+    if args.custody_path and not custody_activate(args.custody_path, args.custody_nonce):os._exit(125)
     watch_owner(args.owner, args.token)
     base = plain_path(args.transient)
     name = 'run-' + uuid.uuid4().hex
@@ -634,6 +800,8 @@ def main():
     parser.add_argument('--owner', type=int, help=argparse.SUPPRESS)
     parser.add_argument('--token', help=argparse.SUPPRESS)
     parser.add_argument('--keep-fd', type=int, action='append', default=[], help=argparse.SUPPRESS)
+    parser.add_argument('--custody-path', type=Path, help=argparse.SUPPRESS)
+    parser.add_argument('--custody-nonce', help=argparse.SUPPRESS)
     parser.add_argument('--timeout', type=float, default=600)
     parser.add_argument('--clean', action='store_true', help='Recover only inactive managed temporary runs')
     parser.add_argument('--relay', action='store_true', help='Serve an asynchronous MCP with idle backend release')
