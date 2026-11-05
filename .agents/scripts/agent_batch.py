@@ -165,6 +165,9 @@ def tooling_inputs(task, root=ROOT):
     # skill; no task-title/keyword classifier selects a role here.
     skills={folder.name for folder in (root/'.agents/skills').iterdir() if folder.is_dir()
             and re.search(r'(?<![A-Za-z0-9_-])'+re.escape(folder.name)+r'(?![A-Za-z0-9_-])',text)} | set(task.get('skills',[]))
+    if task.get('kind')=='implement':
+        # Preserve the maintained source skill catalog in the neutral launch root.
+        skills.update(workspace.MANAGED_SKILLS)
     for skill in skills:
         if not re.fullmatch(r'[a-z][a-z0-9-]*',skill):raise ValueError('Invalid selected skill: '+str(skill))
         folder=root/'.agents/skills'/skill
@@ -256,10 +259,9 @@ def snapshot(data,packet):
     directory=Path('//wsl.localhost')/data['distribution']/linux.lstrip('/')
     runtime=data['city']+'/.gc/mu-runs/'+linux.rsplit('/',1)[1]
     run_directory=Path('//wsl.localhost')/data['distribution']/runtime.lstrip('/')
-    city=Path('//wsl.localhost')/data['distribution']/data['city'].lstrip('/')
-    # orchestration.main qualified these exact four native hooks before batch or
-    # dispatch. Freeze their bytes, never synthesize replacement hook commands.
-    native_hooks=read_worktree(city,'.codex/hooks.json')
+    from runtime_hooks import reviewed_document
+    # Mutable GC city/rig files are not authority for new neutral invocations.
+    native_hooks=(json.dumps(reviewed_document(data['city']),indent=2)+'\n').encode('utf-8')
     prepare_run_roots(data,runtime,[task['key'] for task in packet['jobs']])
     directory.mkdir(parents=True,exist_ok=False)
     for name,blob in files.items():
@@ -267,8 +269,6 @@ def snapshot(data,packet):
     launches,tooling=freeze_launches(directory,linux,packet['jobs'],head,
         lambda task:[linux+'/'+a for a in task['inputs']],run_root=runtime,run_directory=run_directory,
         native_hooks=native_hooks,city=data['city'])
-    if read_worktree(city,'.codex/hooks.json')!=native_hooks:
-        raise RuntimeError('Native city hooks changed during snapshot capture')
     manifest.update(tooling)
     if len(manifest)>512 or sum(v['bytes'] for v in manifest.values())>64*1024*1024:
         raise ValueError('Combined source/tooling snapshot exceeds 512 files / 64 MiB; scope it down')

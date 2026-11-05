@@ -611,7 +611,6 @@ def main():
         configure(data)
         configure_advisers(data)
         check_models(data)
-        trust_city_hooks(data)
         return 0
     if args.action in ('prepare','dispatch','batch','start','gc'):
         check_models(data)
@@ -620,14 +619,12 @@ def main():
         if args.action=='batch':
             ensure_keepalive(data)
             ensure_tmux(data)
-            trust_city_hooks(data)
             result=run_batch(data,tail[0],command)
         else:result=batch_status(data,tail[0],command)
         print(json.dumps(result,ensure_ascii=False))
         return 0
     if args.action=='dispatch':
         ensure_tmux(data)
-        trust_city_hooks(data)
         return dispatch(data,tail[0])
     if args.action == 'prepare':
         prepare(data)
@@ -635,7 +632,6 @@ def main():
     if args.action == 'start':
         ensure_keepalive(data)
         ensure_tmux(data)
-        trust_city_hooks(data)
     try:
         body=sys.stdin.read().replace('\r\n','\n').encode('utf-8') if '--stdin' in tail else None
         result = subprocess.run(command(data, tail), cwd=ROOT,

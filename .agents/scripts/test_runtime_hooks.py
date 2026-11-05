@@ -193,4 +193,44 @@ class HookTrustTests(unittest.TestCase):
             self.assertFalse(any(request['method']=='config/batchWrite' for request in requests))
             self.assertEqual(target.read_text(),'{"hooks":{}}')
 
+
+    def test_invocation_preflight_uses_exact_globals_mutable_scratch_and_never_writes_config(self):
+        import resource_guard
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);city='/srv/city';prepare_hooks(root,city)
+            inventory=self.inventory(root,reviewed_hashes(city))
+            for hook in inventory['data'][0]['hooks']:hook['trustStatus']='trusted'
+            global_args=['-C',str(root),'-c','hooks.state={}','--enable=known']
+            for corrupt in (False,True):
+                inbox=queue.Queue();requests=[]
+                class Input:
+                    def write(self,line):
+                        request=json.loads(line);requests.append(request)
+                        result=copy.deepcopy(inventory) if request['method']=='hooks/list' else {}
+                        if corrupt and request['method']=='hooks/list':result['data'][0]['hooks'][0]['trustStatus']='untrusted'
+                        inbox.put(json.dumps({'id':request['id'],'result':result})+'\n')
+                    def flush(self):pass
+                    def close(self):pass
+                class Output:
+                    def __iter__(self):return self
+                    def __next__(self):
+                        value=inbox.get()
+                        if value is None:raise StopIteration
+                        return value
+                    def close(self):pass
+                class Native:
+                    stdin=Input();stdout=Output()
+                    def poll(self):return None
+                    def kill(self):inbox.put(None)
+                    def wait(self,timeout=None):return 0
+                with patch.object(resource_guard,'ManagedProcess',return_value=Native()) as process:
+                    if corrupt:
+                        with self.assertRaisesRegex(RuntimeError,'not exactly trusted'):
+                            runtime_hooks.verify_invocation_hooks(root,city,global_args,expected_sha256=reviewed_source(root,city),transient=root/'source-scratch',codex='/exact/codex')
+                    else:
+                        self.assertEqual(runtime_hooks.verify_invocation_hooks(root,city,global_args,expected_sha256=reviewed_source(root,city),transient=root/'source-scratch',codex='/exact/codex')['trusted_hooks'],4)
+                self.assertEqual(process.call_args.args[0],['/exact/codex',*global_args,'app-server','--stdio'])
+                self.assertEqual(process.call_args.kwargs['transient'],root/'source-scratch')
+                self.assertEqual([request['method'] for request in requests],['initialize','hooks/list'])
+
 if __name__=='__main__':unittest.main()

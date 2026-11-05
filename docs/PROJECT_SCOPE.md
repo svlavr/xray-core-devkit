@@ -74,8 +74,11 @@ Execution has three distinct roots: the standalone DevKit can expose its
 maintained catalog; an installed Go source checkout owns source execution; a
 frozen external advisory bundle owns only its selected profile/tooling/skills and
 assigned evidence aliases. Catalog reading grants no source setup or execution
-authority. Implementation runs only in the owner-prepared isolated source root,
-with its exact base/local queue and actual Go MCP root. Explicit local handoff
+authority. Implementation source operations run only in the owner-prepared isolated source
+root, with its exact base/local queue and actual Go MCP root. For new city-bound
+workers, native Codex cwd is the frozen neutral tooling root outside Git; that
+separate cwd grants no source authority. Source commands use explicit source_root
+workdir/absolute paths and its applicable AGENTS instructions. Explicit local handoff
 commit authority is separate from main's integrated checkpoint/push policy.
 
 For source-size accounting, the owner supplies/reviews `.agents/metrics/modules.json`

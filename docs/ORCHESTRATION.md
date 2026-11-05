@@ -247,9 +247,10 @@ configuration. Unknown/starting controller state and a live reload failure remai
 errors; preparation never starts a controller to hide them.
 Its manifest includes the city, source SHA, generation, queue, worktree base and
 analysis-tools root. Each pre-start revalidates the slot and local queue, generates
-worker-only ignored context. Before execution the bootstrap verifies the existing
-city-bound hooks and applies only invocation-scoped trust for that prepared cwd
-and those four identities; it does not add per-job trust to user configuration.
+worker-only ignored context. Before execution a new city-bound implementation launch verifies its frozen
+neutral tooling root has no Git ancestry, validates the prepared source checkout
+separately and checks the effective native inventory is exactly its four trusted
+hooks. Trust remains invocation-only; user configuration is not changed.
 Workers read [PROJECT_SCOPE.md](PROJECT_SCOPE.md) and their dispatched write set. They may
 create local handoff commits only when that exact assignment explicitly
 authorizes them, within their isolated root/base/local queue. They never publish.
@@ -353,19 +354,28 @@ inputs; the adapter creates only minimal ignored context for the frozen reader.
 
 Before bootstrap, native Gas City creates and overlays each adviser's mutable
 `.gc/mu-advisers/{{.AgentBase}}` work directory as its Linux user. Concrete pool
-slots expand to distinct paths. This keeps native hook/session-key overlay writes
-away from the canonical reviewed city hooks and immutable snapshots. The host
+slots expand to distinct paths. GC owns those mutable overlays and may restage
+CITY/RIG hook files too; they are never authority for new frozen hooks. The host
 generator writes the template only; it does not create those directories via
 Windows UNC. Bootstrap then changes to its bound task root.
 
 Each adviser starts in its own frozen tooling directory and reads only its
 assigned source aliases. It has public retrieval configuration without a Go MCP.
 Mutable launch receipts and scratch live in a separately prepared run directory
-created by the selected Linux user, outside immutable inputs. Implementers start
-in their prepared checkout; the bootstrap regenerates its ignored worker config
-using the frozen adapter and explicit actual Go root. The role, MCP settings,
-prepared cwd and four existing native hook identities reach the invocation as
-TOML-safe overrides. Permissions/approval flags stay inherited.
+created by the selected Linux user, outside immutable inputs. New city-bound
+implementers also run Codex from the frozen tooling root outside Git, avoiding
+Codex 0.166 linked-worktree hook redirection to a mutable common rig. Their
+separately validated `source_root`, Go MCP, launch receipts and scratch remain
+in the prepared worker. Every source command must specify that exact source
+workdir and use absolute source paths; read its AGENTS instructions first.
+Implementation bundles retain all eighteen maintained skills; advisory bundles
+retain selected packages. The role, source MCP and four trusted hook identities
+reach the invocation as TOML-safe overrides. Parent permission modes, approvals
+and explicit selectors stay inherited. Native-normalized legacy workspace-write
+roots are preserved in order, deduplicated and extended with only source_root.
+That invocation-only field does not synthesize grants for modern/custom profiles.
+Relative CLI root values follow the actual neutral Codex cwd. No automatic
+`--add-dir` is introduced, so read-only callers avoid its native startup error.
 
 The provider's start/resume commands use a content-addressed deployed bundle.
 The trigger metadata selects a hash-bound job bootstrap, which re-executes those
@@ -390,8 +400,10 @@ cannot use that compatibility path. Closed work stays closed; no automatic
 relaunch, reopen, deletion or task rewrite occurs. Preserve active sessions and
 uncollected results, including the one-time identity record.
 
-`configure` still verifies/persists only the exact reviewed city hook inventory
-and preserves unrelated dedicated-user settings. Per-job project/hook trust is
+New snapshots construct their hook bytes from the reviewed explicit-city
+template, never by copying mutable CITY/RIG hooks. Configure/start/dispatch/batch
+do not automatically trust or reconcile global city hooks. The strict native
+admin helper remains available separately. Per-job project/hook trust is
 invocation-only. Changed or extra hooks fail qualification; the bootstrap never
 replaces hooks or installs a blanket trust bypass. New launch manifests bind the explicit
 validated city; bootstrap rejects a different native `GC_CITY`. GC 1.5.1's city

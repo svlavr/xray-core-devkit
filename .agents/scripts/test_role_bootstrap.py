@@ -4,6 +4,9 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import shutil
+import sys
+import shutil
 import tempfile
 import tomllib
 import unittest
@@ -348,5 +351,94 @@ class LaunchTests(unittest.TestCase):
             self.assertEqual(state,{source+':'+key:{'trusted_hash':value} for key,value in runtime_hooks.reviewed_hashes(city).items()})
             with self.assertRaisesRegex(RuntimeError,'city differs from native trigger city'):
                 self.execute('mc-current',bindings['one'],city='/srv/wrong-city')
+
+
+
+
+
+
+    def outside_git_temp(self):
+        base=Path(os.environ['LOCALAPPDATA'])/'Temp' if os.name=='nt' else Path('/tmp')
+        folder=tempfile.TemporaryDirectory(prefix='mu-neutral-',dir=base)
+        self.assertTrue(Path(folder.name).resolve().is_relative_to(base.resolve()))
+        self.addCleanup(folder.cleanup)
+        return Path(folder.name).resolve()
+
+    def test_configuration_globals_keep_final_order_and_stop_at_literal_prompt(self):
+        args=['-C','/neutral','-c','model="selected"','--config=hooks.state={}',
+              '--disable','plugins','--enable=known','--add-dir','/source','--sandbox','read-only',
+              'resume','session','--','--config','literal prompt']
+        self.assertEqual(bootstrap.configuration_globals(args),args[:12])
+        with self.assertRaisesRegex(RuntimeError,'Unsupported native configuration'):
+            bootstrap.configuration_globals(['--config-file=/unreviewed'])
+        tail=['resume','key','--add-dir','/foreign','--add-dir=/second','--sandbox','read-only','--','--add-dir','literal']
+        self.assertEqual(bootstrap.clean_arguments(tail,neutral_source=True),tail)
+        config,rest=bootstrap.split_configuration_overrides(['resume','key','--config','parent=1','-csecond=2','prompt','--','--config','literal'])
+        self.assertEqual(config,['--config','parent=1','-csecond=2'])
+        self.assertEqual(rest,['resume','key','prompt','--','--config','literal'])
+
+    def test_workspace_roots_preserve_native_absolute_parents_without_policy_classification(self):
+        root=self.outside_git_temp();parent=str(root/'existing');source=root/'source'
+        self.assertEqual(bootstrap.source_workspace_roots([parent,parent,str(source)],source),[parent,str(source)])
+        self.assertEqual(bootstrap.source_workspace_roots([],source),[str(source)])
+        with self.assertRaisesRegex(RuntimeError,'normalized absolute'):
+            bootstrap.source_workspace_roots(['relative-root'],source)
+
+    def test_neutral_root_rejects_git_ancestry_and_environment_overrides(self):
+        with self.assertRaisesRegex(RuntimeError,'Git ancestry'):
+            bootstrap.validate_neutral_root(Path(__file__).resolve().parent,sys.executable)
+        root=self.outside_git_temp();executable=shutil.which('git')
+        self.assertIsNotNone(executable)
+        self.assertEqual(bootstrap.validate_neutral_root(root,executable)['git_ancestry'],'none')
+        for key in ('GIT_DIR','GIT_COMMON_DIR','GIT_WORK_TREE','GIT_CEILING_DIRECTORIES','GIT_CONFIG_COUNT'):
+            with patch.dict(os.environ,{key:'override'}),self.assertRaisesRegex(RuntimeError,'environment overrides'):
+                bootstrap.validate_neutral_root(root,executable)
+        with patch.object(bootstrap.subprocess,'run',return_value=subprocess.CompletedProcess([],128,'','fatal: another failure')):
+            with self.assertRaisesRegex(RuntimeError,'Cannot establish absence'):bootstrap.validate_neutral_root(root,executable)
+
+    def test_new_implementation_runs_in_neutral_tooling_with_source_owned_mcp_and_scratch(self):
+        root=self.outside_git_temp()
+        city='/srv/core-city'
+        _,target,_,bindings,_=self.fixture(root,city=city)
+        path=Path(bindings['one']['path']);launch=json.loads(path.read_bytes())
+        launch.update(mode='implement',store_ref='rig:mu-core')
+        path.write_bytes(batch.encoded(launch));binding={**bindings['one'],'sha256':batch.digest(path.read_bytes())}
+        tooling=target/'tooling/one';worker=root/'worker';local=worker/'.local/workspace';local.mkdir(parents=True)
+        (worker/'.codex').mkdir();source_hooks=worker/'.codex/hooks.json';source_hooks.write_text('untrusted provider staging must stay untouched')
+        (local/'worker.json').write_text(json.dumps({'repo':str(worker),'base':'a'*40,'queue_origin':'/queue'}))
+        git_executable=shutil.which('git');self.assertIsNotNone(git_executable)
+        (local/'context.json').write_text(json.dumps({'analysis_tools':'/tools','git_executable':git_executable}))
+        config={'mcp_servers':{'worker_go':{'command':'worker-gopls','args':['--root',str(worker)]}}}
+        def setup(*args):
+            self.assertEqual(args,(worker,'a'*40,'/queue',Path('/tools')))
+            layer=worker_context.scoped_mcp_args(config)
+            (worker/'.codex/config.toml').write_text('developer_instructions="read .local/workspace/worker.json"\n'+'\n'.join(layer[i+1] for i,x in enumerate(layer) if x=='-c'))
+            return {'status':'WORKER_CONFIGURED','root':str(worker)}
+        with patch.object(bootstrap.Path,'cwd',return_value=worker),patch.object(worker_context,'setup',side_effect=setup), \
+             patch.object(bootstrap,'validate_neutral_root',wraps=bootstrap.validate_neutral_root) as neutral, \
+             patch.object(bootstrap.shutil,'which',return_value='/exact/codex'), \
+             patch.object(runtime_hooks,'verify_invocation_hooks',side_effect=[{'trusted_hooks':4,'workspace_write_roots':[str(root/'parent'),str(root/'parent')]},
+                 {'trusted_hooks':4,'workspace_write_roots':[str(root/'parent'),str(worker)]}]) as preflight:
+            _,runner,_=self.execute('mux-city-worker',binding,['--sandbox','read-only','--config','sandbox_workspace_write.writable_roots='+json.dumps([str(root/'parent')])],store_ref='rig:mu-core',city=city)
+        neutral.assert_called_once_with(tooling,git_executable)
+        command=runner.call_args.args[0]
+        self.assertEqual(command[:3],['/exact/codex','-C',str(tooling)])
+        self.assertEqual(runner.call_args.kwargs['cwd'],tooling)
+        self.assertEqual(runner.call_args.kwargs['transient'],worker/'.local/host/transient')
+        self.assertFalse(any(value.startswith('--add-dir') for value in command))
+        self.assertEqual(preflight.call_args.args,(tooling,city,bootstrap.configuration_globals(command[1:])))
+        self.assertTrue(preflight.call_args.kwargs['read_workspace_roots'])
+        self.assertEqual(preflight.call_count,2)
+        self.assertEqual(preflight.call_args.kwargs['transient'],worker/'.local/host/transient')
+        values=tomllib.loads('\n'.join(command[i+1] for i,x in enumerate(command[:-1]) if x=='-c'))
+        self.assertEqual(values['mcp_servers'],config['mcp_servers'])
+        self.assertEqual(values['sandbox_workspace_write']['writable_roots'],[str(root/'parent'),str(worker)])
+        self.assertIn(str(worker)+'/AGENTS.override.md',values['developer_instructions'])
+        self.assertIn('EVERY source',values['developer_instructions'])
+        self.assertEqual(source_hooks.read_text(),'untrusted provider staging must stay untouched')
+        receipt=json.loads((local/'launch-mux-city-worker.json').read_text())
+        self.assertEqual((receipt['cwd'],receipt['source_root']),(str(tooling),str(worker)))
+        self.assertEqual(receipt['source_validation']['root'],str(worker))
+        self.assertEqual(receipt['source_validation']['workspace_write_roots']['relative_cli_root_anchor'],str(tooling))
 
 if __name__=='__main__':unittest.main()

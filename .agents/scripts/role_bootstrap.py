@@ -5,6 +5,8 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import shutil
+import shutil
 import sys
 
 
@@ -83,7 +85,7 @@ def invocation_trust_args(directory,city=None):
                                               for key,value in reviewed_hashes(selected_city).items()}})]
 
 
-def clean_arguments(argv, features=()):
+def clean_arguments(argv, features=(),neutral_source=False):
     """GC's provider supplies CLI flags; only competency-owned flags are replaced."""
     from role_profiles import override_root
     managed = {'model', 'model_reasoning_effort', 'developer_instructions', 'agents', 'features',
@@ -91,7 +93,9 @@ def clean_arguments(argv, features=()):
     result = []; index = 0
     while index < len(argv):
         item = argv[index]; size = 1; value = None
-        if item=="--dangerously-bypass-hook-trust" or item.startswith("--dangerously-bypass-hook-trust="):
+        if neutral_source and item=='--':
+            result.extend(argv[index:]);break
+        if item=='--dangerously-bypass-hook-trust' or item.startswith('--dangerously-bypass-hook-trust='):
             index+=1;continue
         if item in ('--model', '-m', '--cd', '-C', '--profile', '-p'):
             index += 2; continue
@@ -106,6 +110,69 @@ def clean_arguments(argv, features=()):
             index += size; continue
         result.extend(argv[index:index + size]); index += size
     return result
+
+
+def configuration_globals(argv):
+    """Keep final CLI discovery/configuration overrides without prompt text."""
+    result=[];index=0
+    while index<len(argv):
+        item=argv[index]
+        if item=='--':break
+        if item in ('-C','--cd','-c','--config','--enable','--disable','--add-dir','-s','--sandbox','-a','--ask-for-approval'):
+            if index+1>=len(argv):raise RuntimeError('Missing native configuration argument: '+item)
+            result.extend(argv[index:index+2]);index+=2;continue
+        if item.startswith(('--cd=','--config=','--enable=','--disable=','--add-dir=','--sandbox=','--ask-for-approval=')) or (item.startswith(('-C','-c','-s','-a')) and not item.startswith('--') and len(item)>2):
+            result.append(item)
+        elif item in ('--dangerously-bypass-approvals-and-sandbox','--full-auto'):
+            result.append(item)
+        elif item.startswith(('--config','--profile','--dangerously-bypass-hook-trust')) or item=='-p':
+            raise RuntimeError('Unsupported native configuration argument: '+item)
+        index+=1
+    return result
+
+
+def split_configuration_overrides(argv):
+    """Place parent global config before the final managed override and prompt."""
+    overrides=[];tail=[];index=0
+    while index<len(argv):
+        item=argv[index]
+        if item=='--':tail.extend(argv[index:]);break
+        if item in ('-c','--config'):
+            if index+1>=len(argv):raise RuntimeError('Missing native configuration argument: '+item)
+            overrides.extend(argv[index:index+2]);index+=2;continue
+        if item.startswith('--config=') or (item.startswith('-c') and not item.startswith('--') and len(item)>2):
+            overrides.append(item)
+        else:tail.append(item)
+        index+=1
+    return overrides,tail
+
+
+def source_workspace_roots(parent_roots,source_root):
+    """Preserve native-normalized parent roots; add only the validated source."""
+    if not isinstance(parent_roots,list):raise RuntimeError('Native workspace-write roots must be a list')
+    result=[]
+    for value in [*parent_roots,str(source_root)]:
+        if not isinstance(value,str) or not Path(value).is_absolute():
+            raise RuntimeError('Native workspace-write roots must be normalized absolute paths')
+        if value not in result:result.append(value)
+    return result
+
+
+def validate_neutral_root(directory,git_executable):
+    if not directory.is_absolute() or directory.resolve()!=directory.absolute() or not directory.is_dir():
+        raise RuntimeError('Neutral tooling root must be an existing unaliased directory')
+    discovery={'GIT_DIR','GIT_COMMON_DIR','GIT_WORK_TREE','GIT_CEILING_DIRECTORIES','GIT_DISCOVERY_ACROSS_FILESYSTEM'}
+    if any(key in discovery or key.startswith('GIT_CONFIG') for key in os.environ):
+        raise RuntimeError('Git discovery/configuration environment overrides are forbidden for neutral launch')
+    if any((parent/'.git').exists() or (parent/'.git').is_symlink() for parent in (directory,*directory.parents)):
+        raise RuntimeError('Neutral tooling root has Git ancestry')
+    result=subprocess.run([str(git_executable),'--no-pager','--no-optional-locks','-c','core.fsmonitor=false',
+        '-c','gc.auto=0','-c','maintenance.auto=false','-C',str(directory),'rev-parse','--show-toplevel'],
+        capture_output=True,text=True,encoding='utf-8',timeout=10,
+        env={**os.environ,'LC_ALL':'C','LANG':'C','GIT_OPTIONAL_LOCKS':'0'})
+    if result.returncode!=128 or not result.stderr.startswith('fatal: not a git repository'):
+        raise RuntimeError('Cannot establish absence of Git ancestry for neutral tooling root')
+    return {'root':str(directory),'git_ancestry':'none','git_probe_returncode':128}
 
 
 def bound_launch(task, path, expected, argv):
@@ -153,28 +220,45 @@ def bound_launch(task, path, expected, argv):
     else:
         profile = {'model': assignment['model'], 'effort': assignment['effort'],
                    'features': {}, 'developer_instructions': ''}
-    directory = Path.cwd().resolve() if launch['mode'] == 'implement' else tooling
-    verified(directory/'.codex/hooks.json',launch['native_hooks_sha256'])
-    runtime = directory / '.local/workspace' if launch['mode'] == 'implement' else Path(launch['run_root'])
-    transient = directory / '.local/host/transient' if launch['mode'] == 'implement' else runtime / 'transient'
+    source_root=Path.cwd().resolve() if launch['mode']=='implement' else None
+    neutral_implementation=source_root is not None and city is not None
+    directory=tooling if neutral_implementation or source_root is None else source_root
+    if not neutral_implementation:
+        verified(directory/'.codex/hooks.json',launch['native_hooks_sha256'])
+    runtime = source_root / '.local/workspace' if source_root is not None else Path(launch['run_root'])
+    transient = source_root / '.local/host/transient' if source_root is not None else runtime / 'transient'
     common = ''
     if launch['mode'] == 'implement':
-        marker = json.loads((directory / '.local/workspace/worker.json').read_text())
-        if Path(marker['repo']).resolve() != directory or marker['base'] != launch['source_head']:
+        marker = json.loads((source_root / '.local/workspace/worker.json').read_text())
+        if Path(marker['repo']).resolve() != source_root or marker['base'] != launch['source_head']:
             raise RuntimeError('Prepared worker source/root differs from assignment')
         from worker_context import setup
-        context = json.loads((directory / '.local/workspace/context.json').read_text())
-        setup(directory, marker['base'], marker['queue_origin'], Path(context['analysis_tools']))
-        config = __import__('tomllib').loads((directory / '.codex/config.toml').read_text())
+        context = json.loads((source_root / '.local/workspace/context.json').read_text())
+        setup_result=setup(source_root, marker['base'], marker['queue_origin'], Path(context['analysis_tools']))
+        if neutral_implementation:
+            context = json.loads((source_root / '.local/workspace/context.json').read_text())
+            neutral_validation=validate_neutral_root(directory,context['git_executable'])
+            verified(directory/'.codex/hooks.json',launch['native_hooks_sha256'])
+            source_validation={'root':str(source_root),'base':marker['base'],'queue_origin':marker['queue_origin'],
+                               'worker_context':setup_result,'neutral_root':neutral_validation}
+        config = __import__('tomllib').loads((source_root / '.codex/config.toml').read_text())
         common = config.get('developer_instructions', '')
     else:
         config = __import__('tomllib').loads((tooling / '.codex/config.toml').read_text())
         common = config.get('developer_instructions', '')
     role_guidance = profile['developer_instructions']
     for prefix in ('.agents/', 'docs/', '.local/workspace/'):
-        reader = directory if prefix == '.local/workspace/' else tooling
+        reader = (source_root or directory) if prefix == '.local/workspace/' else tooling
         role_guidance = role_guidance.replace(prefix, str(reader) + '/' + prefix)
-    guidance = (WORKER_INSTRUCTIONS + '\n' + common + '\n' + role_guidance +
+    source_guidance=''
+    if neutral_implementation:
+        common=common.replace('.local/workspace/',str(source_root)+'/.local/workspace/').replace('.local/host/',str(source_root)+'/.local/host/')
+        source_guidance=('\nSource checkout (source_root): '+str(source_root)+'. Native Codex cwd is frozen tooling: '+str(directory)+'. '
+            'Before source work, read '+str(source_root)+'/AGENTS.override.md and '+str(source_root)+'/AGENTS.md if present, plus applicable ancestor instructions. '
+            'For EVERY source filesystem, shell, Git, build or test command set its workdir explicitly to this exact source_root and use absolute source paths. '
+            'Never rely on the native cwd for source files. Frozen tooling is read-only reference input; never edit it. '
+            'Go MCP remains bound to source_root. Runtime and temporary files remain in source_root/.local; honor the task write set.\n')
+    guidance = (WORKER_INSTRUCTIONS + '\n' + common + '\n' + role_guidance + source_guidance+
         '\nExecute ONLY Gas City bead ' + task + '. It is already claimed for this session. '
         'Native Beads store: '+store_ref+'. '+
         ('Use gc bd --rig mu-core for every operation on this task. ' if store_ref=='rig:mu-core' else '')+
@@ -186,14 +270,35 @@ def bound_launch(task, path, expected, argv):
     from worker_context import scoped_mcp_args
     options = ['-C', str(directory), *invocation_trust_args(directory,city),
                *scoped_mcp_args(config), *configuration_args(profile)]
+    tail=clean_arguments(argv,profile['features'],neutral_source=neutral_implementation)
+    codex='codex'
+    if neutral_implementation:
+        codex=shutil.which('codex')
+        if not codex:raise RuntimeError('Codex executable unavailable for native hook preflight')
+        from runtime_hooks import verify_invocation_hooks
+        parent_config,tail=split_configuration_overrides(tail)
+        options.extend(parent_config)
+        parent_validation=verify_invocation_hooks(directory,city,configuration_globals([*options,*tail]),
+            expected_sha256=launch['native_hooks_sha256'],transient=transient,codex=codex,read_workspace_roots=True)
+        parent_roots=parent_validation['workspace_write_roots']
+        workspace_roots=source_workspace_roots(parent_roots,source_root)
+        options.extend(['-c','sandbox_workspace_write.writable_roots='+json.dumps(workspace_roots)])
+        hook_validation=verify_invocation_hooks(directory,city,configuration_globals([*options,*tail]),
+            expected_sha256=launch['native_hooks_sha256'],transient=transient,codex=codex,read_workspace_roots=True)
+        if hook_validation['workspace_write_roots']!=workspace_roots:
+            raise RuntimeError('Native final workspace-write roots differ from the preserved source binding')
+        source_validation['workspace_write_roots']={'parent':parent_roots,'invocation':workspace_roots,
+            'relative_cli_root_anchor':str(directory),'scope':'Legacy workspace-write field only; parent mode and modern permission profiles remain authoritative'}
     receipt = runtime / ('launch-' + task + '.json')
     receipt.parent.mkdir(parents=True, exist_ok=True)
     receipt.write_text(json.dumps({'task': task, 'session': session, 'cwd': str(directory),
         'role': role, 'store_ref':store_ref, 'profile_sha256': assignment.get('profile_sha256'), 'launch_sha256': expected,
         'tooling_root': str(tooling), 'run_root':str(runtime), 'model': profile['model'], 'effort': profile['effort'],
-        'scoped_mcp_sha256':sha(json.dumps(config.get('mcp_servers',{}),sort_keys=True).encode('utf-8'))}) + '\n')
+        'scoped_mcp_sha256':sha(json.dumps(config.get('mcp_servers',{}),sort_keys=True).encode('utf-8')),
+        **({'source_root':str(source_root),'source_validation':source_validation,'native_hook_validation':hook_validation}
+           if neutral_implementation else {})}) + '\n')
     def execute(pass_fds=()):
-        return run(['codex', *options, *clean_arguments(argv, profile['features'])], cwd=directory, timeout=None,
+        return run([codex, *options, *tail], cwd=directory, timeout=None,
                    transient=transient, pass_fds=pass_fds).returncode
     # Native pool capacity is the first gate. Keep the existing one-Astra rule
     # through process exit, including after the bead has closed.

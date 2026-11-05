@@ -93,6 +93,63 @@ def approved_state(root,response,city=None):
     return {h['key']:{'trusted_hash':expected[h['key']]} for h in hooks if h.get('trustStatus')!='trusted'}
 
 
+
+
+def verify_invocation_hooks(root,city,global_args,*,expected_sha256,transient,codex,read_workspace_roots=False):
+    """Read-only native hook discovery using the final model's configuration.
+
+    Only an already trusted exact four-hook inventory succeeds. Trust is supplied
+    by the invocation arguments; this function never writes native configuration.
+    """
+    from resource_guard import ManagedProcess,stop,bounded_send
+    if reviewed_source(root,city)!=expected_sha256:raise RuntimeError('Frozen hook source hash changed before native preflight')
+    deadline=time.monotonic()+30
+    proc=ManagedProcess([str(codex),*global_args,'app-server','--stdio'],cwd=root,
+        transient=transient,stdin=subprocess.PIPE,stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,text=True,encoding='utf-8')
+    replies=queue.Queue()
+    def reader():
+        for line in proc.stdout:
+            try:replies.put(json.loads(line))
+            except ValueError:pass
+        replies.put(None)
+    thread=threading.Thread(target=reader,daemon=True);thread.start()
+    def call(identity,method,params):
+        left=deadline-time.monotonic()
+        if left<=0:raise RuntimeError('Native hook preflight deadline exceeded')
+        bounded_send(proc,{'id':identity,'method':method,'params':params},left)
+        while True:
+            left=deadline-time.monotonic()
+            if left<=0:raise RuntimeError('Native hook preflight deadline exceeded')
+            try:reply=replies.get(timeout=left)
+            except queue.Empty as error:raise RuntimeError('Native hook preflight timed out') from error
+            if reply is None:raise RuntimeError('Native hook preflight process ended')
+            if reply.get('id')==identity:
+                if 'error' in reply:raise RuntimeError(str(reply['error']))
+                return reply['result']
+    try:
+        call(1,'initialize',{'clientInfo':{'name':'mu_invocation_hooks','version':'1'},'capabilities':{'experimentalApi':True}})
+        response=call(2,'hooks/list',{'cwds':[str(root)]})
+        if approved_state(root,response,city):raise RuntimeError('Native invocation hooks are not exactly trusted')
+        details={}
+        if read_workspace_roots:
+            config=call(3,'config/read',{'includeLayers':False,'cwd':str(root)})['config']
+            table=config.get('sandbox_workspace_write')
+            if table is None:table={}
+            if not isinstance(table,dict):raise RuntimeError('Native workspace-write configuration is not a table')
+            roots=table.get('writable_roots')
+            if roots is None:roots=[]
+            if not isinstance(roots,list) or any(not isinstance(path,str) or not Path(path).is_absolute() for path in roots):
+                raise RuntimeError('Native workspace-write roots must be normalized absolute paths')
+            details['workspace_write_roots']=roots
+        if reviewed_source(root,city)!=expected_sha256:raise RuntimeError('Frozen hook source hash changed during native preflight')
+        return {'root':str(root),'city':str(city),'reviewed_hooks':4,'trusted_hooks':4,
+                'source_sha256':expected_sha256,'configuration_writes':0,**details}
+    finally:
+        stop(proc)
+        proc.stdin.close();thread.join(timeout=2);proc.stdout.close()
+
+
 def _trust(root,city=None):
     city=city or root
     if root.resolve()!=root.absolute():raise RuntimeError('Hook root must not alias another path')

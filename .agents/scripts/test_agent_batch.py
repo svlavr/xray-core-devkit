@@ -226,4 +226,31 @@ class BatchTests(unittest.TestCase):
 
 
 
+    def test_implementation_freezes_maintained_catalog_while_advisory_stays_selected(self):
+        task={'kind':'implement','role':'mu_investigator'}
+        _,files=batch.tooling_inputs(task)
+        skills={Path(name).parent.name for name in files if name.endswith('/SKILL.md')}
+        self.assertEqual(skills,batch.workspace.MANAGED_SKILLS)
+        self.assertEqual(len(skills),18)
+        self.assertLess(len(files),512)
+        self.assertLess(sum(map(len,files.values())),64*1024*1024)
+        _,selected=batch.tooling_inputs({**task,'kind':'review','skills':['xray-code-analysis']})
+        self.assertEqual([name for name in selected if name.endswith('/SKILL.md')],['.agents/skills/xray-code-analysis/SKILL.md'])
+
+    def test_neutral_snapshot_constructs_hooks_without_reading_mutable_city_file(self):
+        from runtime_hooks import reviewed_document
+        with tempfile.TemporaryDirectory() as directory:
+            base=Path(directory);real_path=Path
+            data={'city':'/srv/city','distribution':'fixture','user':'owner'}
+            p=packet()
+            with patch.object(batch,'capture',return_value=('a'*40,{},{})), \
+                 patch.object(batch,'Path',side_effect=lambda value:base if value=='//wsl.localhost' else real_path(value)), \
+                 patch.object(batch,'prepare_run_roots'),patch.object(batch,'freeze_launches',return_value=({},{})) as freeze, \
+                 patch.object(batch,'read_worktree',side_effect=AssertionError('Mutable GC city hooks became snapshot authority')), \
+                 patch.object(batch.subprocess,'run',return_value=subprocess.CompletedProcess([],0)):
+                result=batch.snapshot(data,p)
+            self.assertEqual(result['source_head'],'a'*40)
+            self.assertEqual(json.loads(freeze.call_args.kwargs['native_hooks']),reviewed_document(data['city']))
+            self.assertEqual(freeze.call_args.kwargs['city'],data['city'])
+
 if __name__=='__main__':unittest.main()
