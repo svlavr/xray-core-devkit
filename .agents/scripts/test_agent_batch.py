@@ -253,4 +253,30 @@ class BatchTests(unittest.TestCase):
             self.assertEqual(json.loads(freeze.call_args.kwargs['native_hooks']),reviewed_document(data['city']))
             self.assertEqual(freeze.call_args.kwargs['city'],data['city'])
 
+    def test_retained_batch_uses_exact_saved_assignment_before_current_admission(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);state_dir=root/'state';state_dir.mkdir();remote=root/'remote'
+            frozen=remote/'fixture/saved';frozen.mkdir(parents=True)
+            helper=frozen/'role_bootstrap.py';helper.write_bytes(b'old immutable helper')
+            manifest={'role_bootstrap.py':{'sha256':batch.digest(helper.read_bytes())}}
+            (frozen/'manifest.json').write_bytes(batch.encoded(manifest))
+            p=packet();p['jobs'][0].update(previous_model='gpt-6-luna',blocker='unresolved_technical',model='formerly-ignored')
+            file=root/'packet.json';file.write_text(json.dumps(p));data={'distribution':'fixture','user':'owner','city':'/city'}
+            old={'key':'one','id':'mc-retained','route':{'model':'gpt-6.1-sol','effort':'high','target':'mu-reviewer'},'phase':'routed'}
+            state={'batch_id':p['batch_id'],'namespace':batch.namespace(data),'packet_hash':batch.digest(batch.encoded(p)),
+                'evidence':{'linux':'/saved','source_head':'a'*40,'files':manifest,'manifest_sha256':batch.digest((frozen/'manifest.json').read_bytes())},'jobs':[old]}
+            record=state_dir/(p['batch_id']+'.json');record.write_text(json.dumps(state))
+            real_path=Path
+            with patch.object(batch,'STATE',state_dir),patch.object(batch.workspace,'repository_guard'), \
+                 patch.object(batch,'Path',side_effect=lambda value:remote if value=='//wsl.localhost' else real_path(value)), \
+                 patch.object(batch,'select_route',side_effect=AssertionError('Retained packet was re-admitted')), \
+                 patch.object(batch,'snapshot',side_effect=AssertionError('Retained helper was rewritten')), \
+                 patch.object(batch,'Native'),patch.object(batch,'enqueue') as enqueue:
+                result=batch.run_batch(data,file,lambda *args:[])
+                self.assertEqual(result['jobs'][0]['id'],'mc-retained')
+                self.assertEqual(enqueue.call_args.args[0]['jobs'],[old])
+                state['packet_hash']='different';record.write_text(json.dumps(state))
+                with self.assertRaisesRegex(ValueError,'different packet'):batch.run_batch(data,file,lambda *args:[])
+            self.assertEqual(helper.read_bytes(),b'old immutable helper')
+
 if __name__=='__main__':unittest.main()

@@ -6,7 +6,7 @@ import shutil
 import tempfile
 import unittest
 
-from role_profiles import ROOT, SUPPORTED_FEATURES, configuration_args, list_profiles, load_profile
+from role_profiles import ROOT, SUPPORTED_FEATURES, configuration_args, list_profiles, load_profile, preset_policy, select_profile
 
 
 class RoleProfileTests(unittest.TestCase):
@@ -87,6 +87,52 @@ class RoleProfileTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError,'capability reductions'):load_profile('mu_innovator',root)
             profile=load_profile('mu_innovator');profile['features']={name:True}
             with self.assertRaisesRegex(ValueError,'capability reductions'):configuration_args(profile)
+
+
+    def test_five_bounded_presets_keep_full_role_and_default_identity(self):
+        entries,policy_sha=preset_policy()
+        self.assertEqual(len(entries),5)
+        for name,entry in entries.items():
+            with self.subTest(preset=name):
+                base=load_profile(entry['role'])
+                selected=select_profile(entry['role'],task={'kind':entry['kinds'][0],'preset':name,'bounded':True})
+                self.assertEqual((selected['model'],selected['effort']),('gpt-6.1-terra','high'))
+                self.assertEqual(base['model'],'gpt-6.1-sol')
+                self.assertEqual(selected['profile_sha256'],base['profile_sha256'])
+                self.assertTrue(selected['developer_instructions'].startswith(base['developer_instructions']))
+                self.assertIn(entry['scope'],selected['developer_instructions'])
+                self.assertTrue(all(item in selected['developer_instructions'] for item in entry['acceptance']))
+                self.assertEqual(selected['features'],base['features'])
+                self.assertEqual(selected['preset_policy_sha256'],policy_sha)
+                self.assertIn('model="gpt-6.1-terra"',configuration_args(selected))
+                selected['model']='gpt-6.1-sol'
+                with self.assertRaisesRegex(ValueError,'identity changed'):configuration_args(selected)
+
+    def test_unknown_mismatched_or_unbounded_presets_reject(self):
+        task={'kind':'implement','preset':'native-write-fix','bounded':True}
+        for change in ({'preset':None},{'preset':[]},{'preset':'unknown'},{'bounded':False},
+                       {'kind':'review'},{'cross_owner':True}):
+            with self.subTest(change=change),self.assertRaises(ValueError):
+                select_profile('mu_go_worker',task={**task,**change})
+        with self.assertRaises(ValueError):select_profile('mu_reviewer',task=task)
+
+    def test_all_presets_require_exact_bounded_scope_and_keep_default_catalog(self):
+        defaults=list_profiles()
+        self.assertEqual({model:sum(profile['model']==model for profile in defaults) for model in ('gpt-6.1-sol','gpt-6-luna','gpt-6-astra')},
+                         {'gpt-6.1-sol':17,'gpt-6-luna':1,'gpt-6-astra':1})
+        for name,entry in preset_policy()[0].items():
+            valid={'preset':name,'kind':entry['kinds'][0],'bounded':True}
+            for value in (None,False,1,'true'):
+                bad=dict(valid)
+                if value is None:bad.pop('bounded')
+                else:bad['bounded']=value
+                with self.subTest(preset=name,bounded=value),self.assertRaises(ValueError):select_profile(entry['role'],task=bad)
+            for value in (True,None,0,'false'):
+                with self.subTest(preset=name,cross_owner=value),self.assertRaises(ValueError):select_profile(entry['role'],task={**valid,'cross_owner':value})
+            with self.assertRaises(ValueError):select_profile('mu_explorer',task=valid)
+            forbidden=next(kind for kind in ('implement','review','explore','deep') if kind not in entry['kinds'])
+            with self.assertRaises(ValueError):select_profile(entry['role'],task={**valid,'kind':forbidden})
+
 
 
 if __name__=='__main__':unittest.main()

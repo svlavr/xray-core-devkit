@@ -63,7 +63,7 @@ def relative(value):
     return value
 
 
-def check_packet(packet):
+def check_packet(packet,*,admit=True):
     batch=packet.get('batch_id','')
     if not re.fullmatch(r'[a-z0-9][a-z0-9-]{2,47}',batch):
         raise ValueError('batch_id needs 3..48 lowercase letters/digits/hyphens')
@@ -94,7 +94,7 @@ def check_packet(packet):
             raise ValueError('Do not give advisers Windows/mounted paths; use source aliases')
         if not job.get('inputs') or any(a not in sources for a in job['inputs']):
             raise ValueError('Every job must select existing source aliases')
-        if select_route(job)['action']!='DISPATCH':
+        if admit and select_route(job)['action']!='DISPATCH':
             raise ValueError('Resolve missing input/access before submitting the batch')
     return batch
 
@@ -160,6 +160,7 @@ def tooling_inputs(task, root=ROOT):
         paths.add('.agents/scripts/'+name)
     if assignment.get('role'):
         paths.add(assignment['profile_path'])
+    if assignment.get('preset'):paths.add(assignment['preset_policy_path'])
     text=assignment.get('developer_instructions','')
     # The profile selects competencies. Main may explicitly add another workflow
     # skill; no task-title/keyword classifier selects a role here.
@@ -186,6 +187,8 @@ def tooling_inputs(task, root=ROOT):
     files={path:read_worktree(root,path) for path in sorted(paths)}
     if assignment.get('role') and digest(files[assignment['profile_path']])!=assignment['profile_sha256']:
         raise RuntimeError('Role changed during capture')
+    if assignment.get('preset') and digest(files[assignment['preset_policy_path']])!=assignment['preset_policy_sha256']:
+        raise RuntimeError('Model preset policy changed during capture')
     if any(read_worktree(root,path)!=raw for path,raw in files.items()):
         raise RuntimeError('Tooling changed during capture')
     return assignment,files
@@ -336,6 +339,9 @@ def planned_jobs(packet,evidence):
             metadata.update({'mu.launch_path':binding['path'],'mu.launch_sha256':binding['sha256'],
                 'mu.role':route.get('role','legacy'),'mu.profile_sha256':route.get('profile_sha256',''),
                 'mu.context_root':route['context_root'],'mu.skills_root':route['skills_root']})
+            if route.get('preset'):
+                metadata.update({'mu.preset':route['preset'],'mu.preset_policy_sha256':route['preset_policy_sha256'],
+                                 'mu.selection_sha256':route['selection_sha256']})
         elif route.get('role'):
             raise ValueError('Selected role has no frozen launch inputs')
         prefix='mux-b-' if store_ref=='rig:mu-core' else 'mc-b-'
@@ -415,7 +421,7 @@ def check_namespace(state,data):
 
 
 def run_batch(data,path,command):
-    packet=json.loads(Path(path).read_text(encoding='utf-8'));batch=check_packet(packet)
+    packet=json.loads(Path(path).read_text(encoding='utf-8'));batch=check_packet(packet,admit=False)
     workspace.repository_guard();STATE.mkdir(parents=True,exist_ok=True)
     record=STATE/(batch+'.json')
     with lock(STATE/(batch+'.lock')):
@@ -428,6 +434,7 @@ def run_batch(data,path,command):
             if digest((directory/'manifest.json').read_bytes())!=state['evidence']['manifest_sha256']:
                 raise RuntimeError('Snapshot manifest changed')
         else:
+            check_packet(packet)
             evidence=snapshot(data,packet)
             state={'batch_id':batch,'namespace':namespace(data),'packet_hash':digest(encoded(packet)),'evidence':evidence,
                 'created_at':datetime.now(timezone.utc).isoformat(),'jobs':planned_jobs(packet,evidence)}

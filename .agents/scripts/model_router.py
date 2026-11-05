@@ -6,11 +6,14 @@ POLICY = Path(__file__).resolve().parents[1] / 'orchestration/models.json'
 
 
 def resolve_assignment(task, root=None):
-    from role_profiles import load_profile
+    from role_profiles import select_profile
     policy_path = Path(root) / '.agents/orchestration/models.json' if root is not None else POLICY
     policy=json.loads(policy_path.read_text(encoding='utf-8'))
     # Resolve before even returning NEEDS_CONTEXT so unknown identities never pass admission.
-    profile=load_profile(task['role'], root) if 'role' in task else None
+    if any(key in task for key in ('model','effort','model_reasoning_effort')):
+        raise ValueError('Explicit model/effort overrides are unsupported; select an approved task.preset')
+    if 'preset' in task and 'role' not in task:raise ValueError('A model preset requires an explicit role')
+    profile=select_profile(task['role'],root,task=task) if 'role' in task else None
     kind=task.get('kind')
     if kind not in ('explore','implement','review','deep'):
         raise ValueError('Choose a work kind: explore, implement, review, or deep')
@@ -18,6 +21,11 @@ def resolve_assignment(task, root=None):
         return {'action':'NEEDS_CONTEXT','reason':task['blocker']}
     previous=task.get('previous_model')
     unresolved=task.get('blocker')=='unresolved_technical'
+    if previous in ('gpt-6-luna','gpt-6.1-terra') and unresolved:
+        return {'action':'NEEDS_CONTEXT','reason':'Return bounded unresolved scope and observed evidence to the coordinator; no automatic model ladder',
+                'previous_model':previous,'scope':task.get('discriminator') or task.get('scope'), 'evidence':task.get('evidence',[])}
+    if profile and profile.get('preset') and previous is not None:
+        raise ValueError('A model preset is an initial semantic selection, not an automatic retry or escalation')
     if previous=='gpt-6-astra' and unresolved:
         return {'action':'NEEDS_CONTEXT','reason':'Astra already examined this discriminator; obtain new evidence instead of repeating it'}
     if (profile and profile['role']=='mu_deep_reviewer') or kind=='deep' or (previous=='gpt-6.1-sol' and unresolved):

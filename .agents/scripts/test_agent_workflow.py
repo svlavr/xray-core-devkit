@@ -24,6 +24,8 @@ class AgentWorkflowTests(unittest.TestCase):
         shutil.copytree(workspace.ROOT / '.codex/agents', root / '.codex/agents')
         shutil.copytree(workspace.ROOT / '.agents/skills', root / '.agents/skills')
         shutil.copyfile(workspace.ROOT / '.agents/CODEX_PACK.md', root / '.agents/CODEX_PACK.md')
+        policy=root/'.agents/orchestration/model-presets.json';policy.parent.mkdir(parents=True,exist_ok=True)
+        shutil.copyfile(workspace.ROOT/'.agents/orchestration/model-presets.json',policy)
 
     def test_complete_catalog_is_managed_and_generated_without_parent_override(self):
         self.assertTrue(NEW_ROLES <= workspace.MANAGED_ROLES)

@@ -116,14 +116,15 @@ keep source identity, inherited access and checkpoint authority explicit.
   feed real-consumer checks. Load only the implicated methods; no automatic full
   roster, build matrix or device proof.
   [Runtime and protocol specialists](docs/WORKFLOW.md#runtime-and-protocol-specialists)
-- **Model routing:** Luna High for narrow exploration, Sol 6.1 High for ordinary
-  roles, and one Astra High adviser for a named technical question unresolved by
+- **Model routing:** Luna High for narrow exploration, five bounded Terra High
+  task presets, Sol 6.1 High for broader ordinary work, and one Astra High adviser
+  for a named technical question unresolved by
   Sol. The primary model stays the user's choice. Native capacity is 23, subject
-  to the actual session and host limits.
+  to the actual session and host limits. [Initial model selection](docs/MODEL_ROUTING.md)
 - **Context:** 872000 nominal tokens, 95% effective capacity and compaction at
   80% of effective capacity, scope `total`. Local catalog checks do not grant
   account access or prove that an existing session adopted these settings.
-- **MCP and analysis:** pinned gopls v0.23.0, GitNexus, Context7, grep.app public code search, Repomix when
+- **MCP and analysis:** pinned gopls v0.24.0 with retained v0.23 compatibility, GitNexus, Context7, grep.app public code search, Repomix when
   installed, ast-grep, package maps and deadcode. The Windows Go profile is
   enabled; Android Go is configured and initially disabled.
 - **Process control:** owned descendant trees, isolated scratch, bounded I/O,

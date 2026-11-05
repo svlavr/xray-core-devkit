@@ -62,6 +62,7 @@ def verify_worker(core):
 
 
 def build_command(cli,core,tail,role=None,task=None,execute=False):
+    if task and not role:raise ValueError('A task/preset requires an explicit role')
     command=[cli,'-C',str(core),*configuration_args(core)]
     if execute:
         command.append('exec')

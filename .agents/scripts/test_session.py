@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 
 import session
-from role_profiles import ROOT, load_profile
+from role_profiles import ROOT, load_profile, preset_policy
 
 
 class SessionTests(unittest.TestCase):
@@ -155,5 +155,18 @@ class SessionTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError,'context mismatch'):session.verify_worker(root)
                 git.assert_not_called()
 
+
+    def test_each_preset_reaches_actual_cli_arguments_with_scope_and_policy(self):
+        for name,entry in preset_policy()[0].items():
+            task={'kind':entry['kinds'][0],'role':entry['role'],'preset':name,'bounded':True}
+            with self.subTest(preset=name),patch.object(session,'configuration_args',return_value=[]):
+                command=session.build_command('codex',ROOT,['--json','bounded task'],entry['role'],task,True)
+            values={command[i+1].split('=',1)[0]:json.loads(command[i+1].split('=',1)[1]) for i,item in enumerate(command[:-1]) if item=='-c'}
+            self.assertEqual((values['model'],values['model_reasoning_effort']),('gpt-6.1-terra','high'))
+            self.assertIn(entry['scope'],values['developer_instructions'])
+            self.assertIn(name,values['developer_instructions'])
+            self.assertIn('Preset policy SHA-256:',values['developer_instructions'])
+            self.assertEqual(values['agents.enabled'],False)
+            self.assertNotIn('sandbox_mode',values)
 
 if __name__=='__main__':unittest.main()

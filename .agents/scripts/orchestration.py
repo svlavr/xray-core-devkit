@@ -388,9 +388,6 @@ def dispatch(data, path):
     from agent_batch import (snapshot,planned_jobs,enqueue,Native,STATE,save,lock,digest,encoded,
         namespace,check_namespace,verify_copy)
     task=json.loads(Path(path).read_text(encoding='utf-8'))
-    route=resolve_assignment(task,root=ROOT)
-    if route['action']!='DISPATCH':
-        print(json.dumps(route));return 0
     title=task.get('title','').strip();body=task.get('body','').strip()
     if re.search(r'\b[A-Za-z]:[\\/]|/mnt/[a-z](?:/|\b)',body):
         raise ValueError('External agents cannot read Windows paths; use batch sources for verified input delivery')
@@ -420,6 +417,11 @@ def dispatch(data, path):
             if digest((directory/'manifest.json').read_bytes())!=state['evidence']['manifest_sha256']:
                 raise RuntimeError('Dispatch snapshot manifest changed')
         else:
+            # Existing exact packets resume their immutable assignment/helper;
+            # changed admission policy applies only to a new dispatch.
+            route=resolve_assignment(task,root=ROOT)
+            if route['action']!='DISPATCH':
+                print(json.dumps(route));return 0
             evidence=snapshot(data,packet)
             if task['kind']=='implement':
                 active=Path('//wsl.localhost')/data['distribution']/data['rig_root'].lstrip('/')/'.local/workspace/dispatch.json'

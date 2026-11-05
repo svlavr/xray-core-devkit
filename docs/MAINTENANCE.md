@@ -150,6 +150,15 @@ state, account files, caches, build output, and owner-created source catalogs
 or export policies. Hash integrity does not prove content is suitable for public
 disclosure.
 
+Model-routing updates also exercise every named preset through actual session,
+freeze and bootstrap construction, native CLI configuration and source-bound Go
+MCP. Preserve full instructions/skills/parent access, reject mismatched/non-High
+inputs and policy tampering, and recover real previous-distribution frozen jobs
+without applying current admission first. Verify new preset files install/update
+with the manifest and do not overwrite owner edits. Keep source-project benchmark
+receipts and private paths out of public preset metadata and examples. Native
+configuration tests that intercept inference must report zero model turns.
+
 For a distribution change, validate the actual clean extracted archive as well
 as the source tree: verify its manifest/audit, install into an explicit disposable
 target, test update/conflict handling as applicable, provision dependencies and

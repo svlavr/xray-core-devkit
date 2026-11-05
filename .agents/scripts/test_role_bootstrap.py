@@ -441,4 +441,96 @@ class LaunchTests(unittest.TestCase):
         self.assertEqual(receipt['source_validation']['root'],str(worker))
         self.assertEqual(receipt['source_validation']['workspace_write_roots']['relative_cli_root_anchor'],str(tooling))
 
+    def preset_fixture(self,root,name):
+        entry=role_profiles.preset_policy()[0][name]
+        task={'key':'one','kind':entry['kinds'][0],'role':entry['role'],'preset':name,'bounded':True,
+              'title':'Bounded preset caller','body':'Exercise only the assigned bounded acceptance.','inputs':['current']}
+        source=root/'live-source';source.mkdir()
+        shutil.copytree(batch.ROOT/'.agents/skills',source/'.agents/skills')
+        _,inputs=batch.tooling_inputs(task)
+        for relative,raw in inputs.items():
+            target_file=source/relative;target_file.parent.mkdir(parents=True,exist_ok=True);target_file.write_bytes(raw)
+        target=root/'frozen';target.mkdir();runtime=root/'runs';(runtime/'one/transient').mkdir(parents=True)
+        bindings,manifest=batch.freeze_launches(target,target.as_posix(),[task],'a'*40,lambda task:['/frozen-source/current'],source,
+            run_root=runtime.as_posix(),run_directory=runtime,native_hooks=b'legacy immutable hook fixture')
+        return task,target,bindings['one'],manifest
+
+    def test_each_preset_survives_freezing_and_bootstrap_actual_model_arguments(self):
+        for name in role_profiles.preset_policy()[0]:
+            with self.subTest(preset=name),tempfile.TemporaryDirectory() as directory:
+                root=Path(directory);task,target,binding,manifest=self.preset_fixture(root,name)
+                launch=json.loads(Path(binding['path']).read_bytes())
+                self.assertIn('.agents/orchestration/model-presets.json',launch['files'])
+                self.assertEqual(launch['assignment']['preset'],name)
+                self.assertEqual(launch['assignment']['model'],'gpt-6.1-terra')
+                if task['kind']=='implement':
+                    worker=root/'worker';local=worker/'.local/workspace';local.mkdir(parents=True);(worker/'.codex').mkdir()
+                    (worker/'.codex/hooks.json').write_bytes((target/'tooling/one/.codex/hooks.json').read_bytes())
+                    (local/'worker.json').write_text(json.dumps({'repo':str(worker),'base':'a'*40,'queue_origin':'/queue'}))
+                    (local/'context.json').write_text(json.dumps({'analysis_tools':'/tools'}))
+                    def setup(*args):
+                        (worker/'.codex/config.toml').write_text('developer_instructions="worker fixture"\n')
+                    with patch.object(bootstrap.Path,'cwd',return_value=worker),patch.object(worker_context,'setup',side_effect=setup):
+                        result,runner,_=self.execute('mux-preset',binding,['--model','gpt-6.1-sol','-c','model_reasoning_effort="medium"'],store_ref='rig:mu-core')
+                    receipt=local/'launch-mux-preset.json'
+                else:
+                    result,runner,_=self.execute('mc-preset',binding,['--model','gpt-6.1-sol','-c','model_reasoning_effort="medium"'])
+                    receipt=Path(launch['run_root'])/'launch-mc-preset.json'
+                self.assertEqual(result,0)
+                command=runner.call_args.args[0]
+                settings=tomllib.loads('\n'.join(command[i+1] for i,item in enumerate(command[:-1]) if item=='-c'))
+                self.assertEqual((settings['model'],settings['model_reasoning_effort']),('gpt-6.1-terra','high'))
+                self.assertIn(name,settings['developer_instructions'])
+                self.assertIn(role_profiles.preset_policy()[0][name]['scope'],settings['developer_instructions'])
+                saved=json.loads(receipt.read_text())
+                self.assertEqual(saved['selection_sha256'],launch['assignment']['selection_sha256'])
+                self.assertEqual(saved['preset_policy_sha256'],launch['assignment']['preset_policy_sha256'])
+                self.assertNotIn('sandbox_mode',settings)
+
+    def test_preset_assignment_or_frozen_policy_tamper_refuses_before_model(self):
+        for field,value in (('model','gpt-6.1-sol'),('effort','medium'),('preset_policy_sha256','0'*64)):
+            with self.subTest(field=field),tempfile.TemporaryDirectory() as directory:
+                _,_,binding,_=self.preset_fixture(Path(directory),'native-accounting-review')
+                path=Path(binding['path']);launch=json.loads(path.read_bytes());launch['assignment'][field]=value
+                path.write_bytes(batch.encoded(launch));binding={**binding,'sha256':batch.digest(path.read_bytes())}
+                with self.assertRaisesRegex(RuntimeError,'model/preset identity'):
+                    self.execute('mc-tampered',binding)
+        with tempfile.TemporaryDirectory() as directory:
+            _,target,binding,_=self.preset_fixture(Path(directory),'native-accounting-review')
+            (target/'tooling/one/.agents/orchestration/model-presets.json').write_text('{}')
+            with patch.object(resource_guard,'run') as model:
+                with self.assertRaisesRegex(RuntimeError,'Launch input hash mismatch'):
+                    bootstrap.bound_launch('mc-tampered',binding['path'],binding['sha256'],[])
+                model.assert_not_called()
+
+    def test_semantic_policy_tamper_with_refreshed_file_digest_is_still_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            _,target,binding,_=self.preset_fixture(Path(directory),'native-accounting-review')
+            launch_path=Path(binding['path']);launch=json.loads(launch_path.read_bytes())
+            relative='.agents/orchestration/model-presets.json';policy_path=target/'tooling/one'/relative
+            policy=json.loads(policy_path.read_bytes());policy['presets']['native-accounting-review']['scope']+=' Changed semantic scope.'
+            policy_path.write_bytes(batch.encoded(policy));raw=policy_path.read_bytes()
+            launch['files'][relative].update(sha256=batch.digest(raw),bytes=len(raw))
+            launch_path.write_bytes(batch.encoded(launch));binding={**binding,'sha256':batch.digest(launch_path.read_bytes())}
+            with patch.object(resource_guard,'run') as model:
+                with self.assertRaisesRegex(RuntimeError,'model/preset identity'):self.execute('mc-semantic-tamper',binding)
+                model.assert_not_called()
+
+    def test_live_policy_edits_do_not_replace_valid_frozen_selection_or_resume_helper(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);_,target,binding,_=self.preset_fixture(root,'native-accounting-review')
+            live=root/'live-source/.agents/orchestration/model-presets.json';policy=json.loads(live.read_bytes())
+            policy['presets']['native-accounting-review']['scope']+=' Live later scope.';live.write_bytes(batch.encoded(policy))
+            result,model,_=self.execute('mc-frozen-preset',binding)
+            self.assertEqual(result,0);command=model.call_args.args[0]
+            settings=tomllib.loads('\n'.join(command[i+1] for i,value in enumerate(command[:-1]) if value=='-c'))
+            self.assertEqual(settings['model'],'gpt-6.1-terra');self.assertNotIn('Live later scope.',settings['developer_instructions'])
+            metadata={'mu.launch_path':binding['path'],'mu.launch_sha256':binding['sha256']}
+            with patch.object(bootstrap,'entry_for',return_value={'metadata':metadata}),patch.object(os,'execv') as execute, \
+                 patch.dict(os.environ,{'GC_TRIGGER_BEAD_ID':'mc-frozen-preset'}):bootstrap.launch(['resume','native-session'])
+            self.assertEqual(execute.call_args.args[1][1],str(target/'tooling/one/.agents/scripts/role_bootstrap.py'))
+            self.assertIn('resume',execute.call_args.args[1])
+
+
+
 if __name__=='__main__':unittest.main()

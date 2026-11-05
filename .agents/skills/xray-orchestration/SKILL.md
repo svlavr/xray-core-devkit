@@ -117,8 +117,8 @@ replacement packet. Missing inputs must fail before any work is routed.
 
 Gas City owns the durable queue, mail, sessions and worker worktrees. Use its
 pinned pack and native commands, rather than constructing another scheduler.
-Implementation workers default to GPT-6.1 Sol high; advisory lanes use the explicit
-Luna/Sol/Astra routing below. The parent model stays user-selected. Worker CLI nesting is
+Implementation workers default to GPT-6.1 Sol high; qualified bounded work uses
+the Terra high presets below. The parent model stays user-selected. Worker CLI nesting is
 disabled: the coordinator dispatches the task graph. Keep one writer per worktree.
 Every job identifies its exact base, source/contract inputs, owned paths, expected
 result and validation owner. Preserve other workers' changes.
@@ -126,8 +126,17 @@ result and validation owner. Preserve other workers' changes.
 Model routing is automatic. For each job write a scoped JSON packet with `kind`
 (`explore`, `implement`, `review`, `deep`), `title`, `body`, and source/evidence
 locations, then call `orchestration.py dispatch <packet.json>`. Set `bounded=true`
-only for a narrow lookup; cross-owner analysis uses Sol. An unresolved Luna
-result moves to Sol. For a Sol technical impasse include `previous_model`,
+for a narrow lookup or an exact qualified preset scope; cross-owner analysis
+uses Sol. Before the first launch, automatically choose a matching `preset`
+from `.agents/orchestration/model-presets.json`: native-write-fix,
+native-accounting-review, delivery-evidence-review, tool-update-evidence or
+existing-writer-solution. Read `docs/MODEL_ROUTING.md` for exact role/kind,
+scope and acceptance. Use `session.py --role ROLE --task PACKET --exec ...`
+or external dispatch; native custom types retain their declared defaults.
+The complete role instructions, selected model/High effort, scope and policy
+identity must survive freezing and resume. Outside these bounded scopes choose
+Sol initially. Luna/Terra unresolved work returns concrete scope/evidence to main
+without an automatic model retry ladder. For a Sol technical impasse include `previous_model`,
 `blocker="unresolved_technical"`, one `discriminator` and its `evidence`; the
 router selects the single Astra adviser automatically. Do not ask the user to
 select a model. Preserve results in the Beads handoff, then return ordinary

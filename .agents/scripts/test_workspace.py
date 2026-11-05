@@ -160,6 +160,16 @@ class WorkspaceTests(unittest.TestCase):
             self.setup()
         self.assertEqual(config.read_text(), content)
 
+    def test_primary_mail_deferral_missing_or_false_is_rejected(self):
+        self.setup()
+        target=self.root/'.codex/config.toml';content=target.read_text(encoding='utf-8')
+        self.assertIs(tomllib.loads(content)['features']['defer_mailbox_preemption'],True)
+        for replacement in ('defer_mailbox_preemption = false\n',''):
+            target.write_text(content.replace('defer_mailbox_preemption = true\n',replacement),encoding='utf-8')
+            with self.subTest(replacement=replacement),patch.object(workspace,'validate',return_value={'roles':19,'skills':18}):
+                with self.assertRaisesRegex(RuntimeError,'Host config differs'):
+                    workspace.verify(catalog=self.root/'absent-catalog.json')
+
     def test_regeneration_replaces_managed_remote_server_auth_and_denials(self):
         self.setup()
         config = self.root / '.codex/config.toml'
@@ -257,6 +267,8 @@ class ConfigurationTests(unittest.TestCase):
             shutil.copytree(source / '.codex/agents', root / '.codex/agents')
             shutil.copytree(source / '.agents/skills', root / '.agents/skills')
             shutil.copyfile(source / '.agents/CODEX_PACK.md', root / '.agents/CODEX_PACK.md')
+            policy=root/'.agents/orchestration/model-presets.json';policy.parent.mkdir(parents=True,exist_ok=True)
+            shutil.copyfile(source/'.agents/orchestration/model-presets.json',policy)
             skill = root / '.agents/skills/source-local-helper/SKILL.md'
             skill.parent.mkdir(exist_ok=True)
             skill.write_text('---\nname: source-local-helper\ndescription: Source-owned helper\n---\nRead source.\n')
@@ -283,6 +295,7 @@ class ConfigurationTests(unittest.TestCase):
             parsed = tomllib.loads(content)
             self.assertEqual(parsed['mcp_servers']['xray_gopls_windows']['command'], str(root / 'python.exe'))
             arguments = session.configuration_args(root)
+            self.assertIn('features.defer_mailbox_preemption=true',arguments)
             for index in range(1, len(arguments), 2):
                 tomllib.loads(arguments[index])
             self.assertEqual(parsed['mcp_servers']['xray_gopls_windows']['args'][0],
@@ -295,6 +308,11 @@ class ConfigurationTests(unittest.TestCase):
         self.assertNotIn('model_reasoning_effort', config)
         self.assertEqual(config['agents']['max_concurrent_threads_per_session'], 23)
         self.assertEqual(config['agents']['default_subagent_model'], 'gpt-6.1-sol')
+        self.assertIs(config['features']['defer_mailbox_preemption'],True)
+        self.assertIs(config['features']['multi_agent_v2'],True)
+        self.assertIs(config['agents']['interrupt_message'],True)
+        self.assertNotIn('instant_interrupt',config['features'])
+        self.assertNotIn('code_mode_interrupt',config['features'])
         self.assertTrue(workspace.MANAGED_ROLES.issubset(config['agents']))
         self.assertFalse(config['mcp_servers']['xray_gopls_android']['enabled'])
         self.assertTrue(config['mcp_servers']['xray_gopls_windows']['enabled'])

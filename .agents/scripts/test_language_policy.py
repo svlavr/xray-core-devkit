@@ -32,6 +32,8 @@ class LanguageInheritanceTests(unittest.TestCase):
                 path = root/name
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text('fixture authority')
+            policy=root/'.agents/orchestration/model-presets.json';policy.parent.mkdir(parents=True,exist_ok=True)
+            shutil.copyfile(workspace.ROOT/'.agents/orchestration/model-presets.json',policy)
             with patch.object(workspace, 'ROOT', root):
                 self.assertEqual(workspace.validate()['roles'], 19)
                 role = root/'.codex/agents/mu_reviewer.toml'

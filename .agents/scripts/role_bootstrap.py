@@ -209,14 +209,19 @@ def bound_launch(task, path, expected, argv):
     tooling = Path(launch['tooling_root'])
     # This process was re-executed from the selected bundle: imports cannot fall
     # back to a later shared helper deployment or the canonical Windows source.
-    from role_profiles import load_profile, configuration_args
+    from role_profiles import select_profile, configuration_args
     from language_policy import WORKER_INSTRUCTIONS
     from resource_guard import run
     role = assignment.get('role')
     if role:
-        profile = load_profile(role, tooling)
+        request=assignment.get('selection_request',{})
+        if assignment.get('preset') and request.get('kind')!=launch['mode']:
+            raise RuntimeError('Preset request kind differs from frozen launch mode')
+        profile = select_profile(role,tooling,task=request)
         if profile['profile_sha256'] != assignment['profile_sha256']:
             raise RuntimeError('Selected role differs from frozen assignment')
+        for key in ('model','effort','preset','preset_policy_path','preset_policy_sha256','preset_sha256','model_policy_sha256','selection_sha256'):
+            if profile.get(key)!=assignment.get(key):raise RuntimeError('Selected model/preset identity differs from frozen assignment: '+key)
     else:
         profile = {'model': assignment['model'], 'effort': assignment['effort'],
                    'features': {}, 'developer_instructions': ''}
@@ -293,6 +298,7 @@ def bound_launch(task, path, expected, argv):
     receipt.parent.mkdir(parents=True, exist_ok=True)
     receipt.write_text(json.dumps({'task': task, 'session': session, 'cwd': str(directory),
         'role': role, 'store_ref':store_ref, 'profile_sha256': assignment.get('profile_sha256'), 'launch_sha256': expected,
+        **({key:profile[key] for key in ('preset','preset_policy_sha256','preset_sha256','model_policy_sha256','selection_sha256')} if profile.get('preset') else {}),
         'tooling_root': str(tooling), 'run_root':str(runtime), 'model': profile['model'], 'effort': profile['effort'],
         'scoped_mcp_sha256':sha(json.dumps(config.get('mcp_servers',{}),sort_keys=True).encode('utf-8')),
         **({'source_root':str(source_root),'source_validation':source_validation,'native_hook_validation':hook_validation}

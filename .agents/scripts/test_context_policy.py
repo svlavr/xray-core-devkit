@@ -11,10 +11,18 @@ import context_policy
 class ContextPolicyTests(unittest.TestCase):
     def test_eighty_percent_of_effective_window_and_catalog_guard(self):
         catalog={'models':[{'slug':n,'context_window':272000,'max_context_window':872000,
-            'effective_context_window_percent':95} for n in ('gpt-6-astra','gpt-6.1-sol','gpt-6-luna')]}
+            'effective_context_window_percent':95} for n in ('gpt-6-astra','gpt-6.1-sol','gpt-6-luna','gpt-6.1-terra')]}
         self.assertEqual(settings(catalog)['model_auto_compact_token_limit'],662720)
-        catalog['models'][-1]['max_context_window']=272000
+        catalog['models'][-2]['max_context_window']=272000
         with self.assertRaisesRegex(RuntimeError,'gpt-6-luna'):settings(catalog)
+
+    def test_missing_or_insufficient_terra_capability_is_rejected(self):
+        catalog={'models':[{'slug':name,'max_context_window':872000,
+            'effective_context_window_percent':95} for name in ('gpt-6-astra','gpt-6.1-sol','gpt-6-luna')]}
+        with self.assertRaisesRegex(RuntimeError,'gpt-6.1-terra'):settings(catalog)
+        catalog['models'].append({'slug':'gpt-6.1-terra','max_context_window':272000,
+                                  'effective_context_window_percent':95})
+        with self.assertRaisesRegex(RuntimeError,'gpt-6.1-terra'):settings(catalog)
 
     def test_absent_or_malformed_catalog_is_not_claimed_compatible(self):
         with self.assertRaisesRegex(RuntimeError, 'capability catalog'):

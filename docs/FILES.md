@@ -114,6 +114,7 @@ Roles disable nesting. `sandbox_mode` expresses intent; actual access follows pa
 
 - [.agents/orchestration/context.json](../.agents/orchestration/context.json): context policy read by `context_policy.py` and local/external setup: model family, 872000-token window, 95% effective capacity, 80% compaction threshold of that capacity, `total` scope. This is policy, not observed accounting.
 - [.agents/orchestration/models.json](../.agents/orchestration/models.json): external route map consumed by model router/adviser setup; model/effort/target/pool ceilings. Edit together with role checks/city/routing docs.
+- [.agents/orchestration/model-presets.json](../.agents/orchestration/model-presets.json): five bounded Terra High initial selections on existing roles; scope/acceptance and exact role/kind admission are described in [model routing](MODEL_ROUTING.md).
 - [.agents/orchestration/city.toml](../.agents/orchestration/city.toml): configure template for managed city/provider fields, 25-session ceiling, 23-worker pool, pinned roles import, suspended idle dog and pre-start hook. Registered rigs/unrelated fields are preserved; managed fields are reapplied.
 - [.agents/orchestration/adviser-policy.md](../.agents/orchestration/adviser-policy.md): adviser guidance prepended with language policy to pinned native prompts in generated city directories; configure replaces those overlays.
 

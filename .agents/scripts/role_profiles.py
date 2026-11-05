@@ -11,6 +11,67 @@ ROOT = Path(__file__).resolve().parents[2]
 # These may disable inherited capabilities, never enable permissions or tools.
 SUPPORTED_FEATURES = {'shell_tool', 'apps', 'plugins', 'memories', 'request_permissions_tool'}
 
+PRESET_PATH = '.agents/orchestration/model-presets.json'
+PRESET_ROLES = {'native-write-fix': 'mu_go_worker', 'native-accounting-review': 'mu_reviewer', 'delivery-evidence-review': 'mu_behavior_reviewer', 'tool-update-evidence': 'mu_upstream_researcher', 'existing-writer-solution': 'mu_solution_researcher'}
+PRESET_KINDS = {'native-write-fix': ['implement'], 'native-accounting-review': ['review'], 'delivery-evidence-review': ['review'], 'tool-update-evidence': ['review', 'explore'], 'existing-writer-solution': ['review', 'explore']}
+
+
+def canonical_hash(value):
+    return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=False).encode('utf-8')).hexdigest()
+
+
+def preset_policy(root=None):
+    root=Path(root or ROOT).resolve();path=root/PRESET_PATH
+    if not path.is_file() or path.resolve()!=path.absolute() or path.stat().st_nlink!=1:
+        raise ValueError('Missing or aliased model preset policy')
+    raw=path.read_bytes();policy=json.loads(raw)
+    if not isinstance(policy,dict):raise ValueError('Unsupported public model preset catalog')
+    entries=policy.get('presets',{})
+    if policy.get('schema')!=1 or not isinstance(entries,dict) or set(entries)!=set(PRESET_ROLES):raise ValueError('Unsupported public model preset catalog')
+    for name,entry in entries.items():
+        if not isinstance(entry,dict):raise ValueError('Invalid bounded model preset: '+name)
+        if (entry.get('role')!=PRESET_ROLES[name] or entry.get('model')!='gpt-6.1-terra' or entry.get('effort')!='high'
+                or not isinstance(entry.get('kinds'),list) or not entry['kinds']
+                or entry['kinds']!=PRESET_KINDS[name]
+                or not isinstance(entry.get('scope'),str) or not entry['scope'].strip()
+                or not isinstance(entry.get('acceptance'),list) or not entry['acceptance']
+                or any(not isinstance(item,str) or not item.strip() for item in entry['acceptance'])
+                or not isinstance(entry.get('evidence'),dict)
+                or entry['evidence'].get('type')!='bounded-public-consumer-fixture'
+                or not isinstance(entry['evidence'].get('references'),list) or not entry['evidence']['references']
+                or any(not isinstance(ref,str) or not re.fullmatch(r'docs/[A-Za-z0-9_.-]+\.md',ref) for ref in entry['evidence']['references'])):
+            raise ValueError('Invalid bounded model preset: '+name)
+    return entries,hashlib.sha256(raw).hexdigest()
+
+
+def selection_hash(profile):
+    return canonical_hash({key:profile[key] for key in ('role','profile_sha256','preset','preset_policy_sha256',
+        'preset_sha256','model_policy_sha256','model','effort','selection_request')})
+
+
+def select_profile(name,root=None,*,task=None):
+    """Apply an explicit initial preset; the coordinator owns semantic matching."""
+    profile=load_profile(name,root)
+    task=task or {}
+    if 'preset' not in task:return profile
+    preset=task['preset']
+    if not isinstance(preset,str) or preset not in PRESET_ROLES:raise ValueError('Unknown Xray model preset: '+str(preset))
+    entries,policy_sha=preset_policy(root);entry=entries[preset]
+    if (name!=entry['role'] or task.get('kind') not in entry['kinds'] or task.get('bounded') is not True
+            or task.get('cross_owner',False) is not False):
+        raise ValueError('Model preset requires its exact role, compatible kind, bounded=true and no cross-owner scope: '+preset)
+    request={key:task[key] for key in ('preset','kind','bounded','cross_owner') if key in task}
+    root=Path(root or ROOT).resolve()
+    profile.update(preset=preset,preset_policy_path=PRESET_PATH,preset_policy_sha256=policy_sha,
+        preset_sha256=canonical_hash(entry),model_policy_sha256=hashlib.sha256((root/'.agents/orchestration/models.json').read_bytes()).hexdigest(),
+        selection_request=request,model=entry['model'],effort=entry['effort'])
+    profile['selection_sha256']=selection_hash(profile)
+    profile['developer_instructions']+=('\n\nInitial bounded model preset: '+preset+'. Preset policy SHA-256: '+policy_sha+
+        '. Preset entry SHA-256: '+profile['preset_sha256']+'.\nScope: '+entry['scope']+
+        '\nAcceptance:\n'+'\n'.join('- '+item for item in entry['acceptance'])+
+        '\nThis bounded selection does not promote the whole role or authorize work outside the assigned task.')
+    return profile
+
 
 def override_root(value):
     """Read a CLI override's TOML key independently of its possibly bare string value."""
@@ -85,6 +146,12 @@ def list_profiles(root=None):
 
 def configuration_args(profile):
     """Apply only executable competency settings; permissions and tools stay inherited."""
+    if profile.get('effort')!='high':raise ValueError('Selected competency effort must remain high')
+    if profile.get('preset'):
+        if profile.get('model')!='gpt-6.1-terra' or profile.get('selection_sha256')!=selection_hash(profile):
+            raise ValueError('Selected model preset identity changed')
+    elif profile.get('model') not in {'gpt-6.1-sol','gpt-6-luna','gpt-6-astra'}:
+        raise ValueError('A non-default model requires an approved preset')
     settings = {'model': profile['model'], 'model_reasoning_effort': profile['effort'],
                 'developer_instructions': profile['developer_instructions'], 'agents.enabled': False}
     settings.update({'features.' + name: value for name, value in feature_reductions(profile.get('features', {})).items()})

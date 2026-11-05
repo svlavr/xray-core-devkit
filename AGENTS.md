@@ -24,7 +24,9 @@ queue and explicitly authorized local commit policy.
 For substantial independent lanes, main records the ready frontier and delegates
 useful ready work before detailed analysis. Use `xray-orchestration`; select real
 role descriptions with `session.py --list-roles` and pass `role` to the actual
-route. Luna high explores; Sol 6.1 high handles ordinary roles; one Astra high
+route. Luna high explores; Sol 6.1 high is the ordinary role default; matching
+bounded tasks select Terra high through `task.preset` before their first launch.
+Read `docs/MODEL_ROUTING.md`; no cheaper-model retry ladder is permitted. One Astra high
 adviser resolves a named discriminator after Sol. Observed slots constrain the
 configured capacity 23; capacity is not a quota. Preserve active jobs/results.
 

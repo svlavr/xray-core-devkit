@@ -1,6 +1,6 @@
 """Cost routing must never turn missing evidence into an Astra worker fan-out."""
 import unittest
-from role_profiles import list_profiles
+from role_profiles import list_profiles, preset_policy
 from model_router import select_route,resolve_assignment,validate_models
 
 
@@ -13,9 +13,7 @@ class ModelRoutingTests(unittest.TestCase):
         for task in [{'kind':'explore','bounded':True,'cross_owner':True},{'kind':'implement'},{'kind':'review'}]:
             self.assertEqual(select_route(task)['model'],'gpt-6.1-sol')
 
-    def test_unresolved_luna_escalates_to_sol(self):
-        r=select_route({'kind':'explore','bounded':True,'previous_model':'gpt-6-luna','blocker':'unresolved_technical'})
-        self.assertEqual(r['model'],'gpt-6.1-sol')
+
 
     def test_astra_requires_sol_evidence_and_named_question(self):
         with self.assertRaises(ValueError):select_route({'kind':'deep'})
@@ -79,6 +77,38 @@ class ModelRoutingTests(unittest.TestCase):
         assignment=resolve_assignment({'kind':'review'})
         self.assertNotIn('role',assignment)
         self.assertNotIn('profile_sha256',assignment)
+
+
+
+    def test_each_qualified_initial_preset_routes_with_role_and_policy_identity(self):
+        for name,entry in preset_policy()[0].items():
+            task={'kind':entry['kinds'][0],'role':entry['role'],'preset':name,'bounded':True}
+            selected=resolve_assignment(task)
+            self.assertEqual((selected['model'],selected['effort']),('gpt-6.1-terra','high'))
+            self.assertEqual(selected['preset'],name)
+            self.assertEqual(selected['target'],'mu-core/codex' if task['kind']=='implement' else 'mu-reviewer')
+            for override in ({'model':'arbitrary'},{'effort':'medium'},{'model_reasoning_effort':'high'},
+                             {'previous_model':'gpt-6.1-sol'}):
+                with self.subTest(preset=name,override=override),self.assertRaises(ValueError):
+                    resolve_assignment({**task,**override})
+
+    def test_unresolved_luna_or_terra_returns_scope_to_coordinator(self):
+        for previous in ('gpt-6-luna','gpt-6.1-terra'):
+            r=select_route({'kind':'explore','bounded':True,'previous_model':previous,'blocker':'unresolved_technical',
+                            'discriminator':'remaining scope','evidence':['observed failure']})
+            self.assertEqual(r['action'],'NEEDS_CONTEXT')
+            self.assertEqual(r['scope'],'remaining scope')
+            self.assertEqual(r['evidence'],['observed failure'])
+
+    def test_presets_are_initial_only_and_explicit_model_effort_never_override(self):
+        for name,entry in preset_policy()[0].items():
+            task={'preset':name,'role':entry['role'],'kind':entry['kinds'][0],'bounded':True}
+            for key,value in (('model','gpt-6.1-sol'),('effort','medium'),('model_reasoning_effort','medium')):
+                with self.subTest(preset=name,override=key),self.assertRaises(ValueError):resolve_assignment({**task,key:value})
+            with self.assertRaises(ValueError):resolve_assignment({**task,'previous_model':'gpt-6.1-sol'})
+        for preset in (None,[],{},False,1,'unknown'):
+            with self.subTest(preset=preset),self.assertRaises(ValueError):resolve_assignment({'preset':preset,'role':'mu_go_worker','kind':'implement','bounded':True})
+        with self.assertRaises(ValueError):resolve_assignment({'preset':'native-write-fix','kind':'implement','bounded':True})
 
 
 

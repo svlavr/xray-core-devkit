@@ -103,7 +103,7 @@ Git identity inside this dedicated user account before allowing worker commits.
 Complete `/usr/local/bin/codex login` interactively using the user's own account.
 Credentials stay in Linux `$HOME/.codex` and never enter examples, source bundles,
 queues or commits. Run Codex once to obtain its current `models_cache.json`.
-`configure` verifies that Luna, Sol 6.1 and Astra support the maintained context
+`configure` verifies that Luna, Terra 6.1, Sol 6.1 and Astra support the maintained context
 policy before admitting these settings. Unsupported access or changed context
 capabilities block setup and need an explicit policy review.
 
@@ -258,8 +258,11 @@ Integration, review and publication belong to the main coordinator.
 
 ## Dispatch, inspect and resume
 
-Model routing is explicit: bounded lookup uses Luna High; ordinary implementation
-and wider analysis/review use Sol 6.1 High. A named technical discriminator still
+Model routing is explicit: bounded lookup uses Luna High; the five matching
+`task.preset` scopes use Terra 6.1 High; broader ordinary implementation and
+analysis/review use Sol 6.1 High. Read [initial model selection](MODEL_ROUTING.md).
+Luna/Terra unresolved work returns context without an automatic model retry ladder.
+A named technical discriminator still
 unresolved after a Sol attempt, with its evidence attached, may enter the single
 Astra High city-scoped pool. Missing files, access and unrun validation request
 context instead of escalating. An unchanged Astra question is not repeated.
@@ -273,6 +276,11 @@ add actual installed skill packages, including `adversarial-reviewer`,
 putting a role name in the body alone does not apply its profile. Generic packets
 retain kind-based routing without claiming a specialist. Named Astra packets
 must explicitly select `mu_deep_reviewer` and include the Sol evidence gate.
+An alternate initial selection adds `preset`, `bounded: true` and no cross-owner
+scope; the preset must match the exact selected role and kind. Its full scope,
+acceptance and model/policy identities are frozen with the existing role/skills.
+Already saved exact packets recover their original bindings before new admission
+policy is applied; updates do not rewrite active jobs or closed results.
 
 Implementation targets `mu-core/codex` and requires `base`, exact relative
 `write_set` paths, `acceptance`, `validation` and `stop_conditions`, plus a

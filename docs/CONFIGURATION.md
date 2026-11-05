@@ -23,6 +23,8 @@ processes. The [file map](FILES.md) lists every component; the main inputs are:
 - `.agents/orchestration/models.json`, `.agents/runtime-lock.json` and
   `.agents/orchestration/city.toml`: external routing/runtime defaults. External
   host selection is separate; see [orchestration](ORCHESTRATION.md).
+- `.agents/orchestration/model-presets.json`: five bounded Terra High initial
+  selections, exact role/kind constraints, scope and acceptance instructions.
 - Optional owner-created `.agents/project.json`: branch/baseline and repository
   publication policy, described below.
 
@@ -140,6 +142,14 @@ true`, default subagent model `gpt-6.1-sol`, default subagent effort `high`,
 Capacity remains subject to observed session/host limits. Role paths refer to
 all nineteen distributed TOML files; each disables nested native workers.
 
+Primary generation also sets `features.defer_mailbox_preemption = true`.
+On the qualified Codex 0.166.0-alpha.6 runtime this lets prepared calls finish across
+automatic child-mail arrivals, then delivers the mail at a normal boundary.
+The option is UnderDevelopment. Human stop/steer and other interruption settings
+remain separate. This is a coordinator scheduling choice, not a permission or
+model override. Fresh launches adopt regenerated settings; frozen jobs retain
+their original configuration. See [model routing](MODEL_ROUTING.md#interrupted-calls).
+
 Validation requires the complete managed set of eighteen skills and nineteen roles.
 Source-owned extra skills/roles are preserved and reported separately as
 `additional_skills` and `additional_roles`. The generated layer explicitly
@@ -149,6 +159,9 @@ Codex's native discovery rather than being rewritten into the managed config.
 The eighteen skills and nineteen roles are retained. `mu_explorer` uses
 `gpt-6-luna` high, ordinary worker/review roles use `gpt-6.1-sol` high, and
 `mu_deep_reviewer` uses `gpt-6-astra` high for one evidenced unresolved question.
+Five ordinary roles additionally accept bounded Terra High task presets through
+the bound profile route. Their broad defaults stay Sol. Main selects a matching
+preset before launch; [model routing](MODEL_ROUTING.md) owns the scope and syntax.
 Main's model and effort are not overridden. Internal tasks, reports and docs use
 English; direct primary-coordinator replies use Russian.
 
@@ -184,7 +197,8 @@ model_auto_compact_token_limit = 662720
 model_auto_compact_token_limit_scope = "total"
 ```
 
-The policy's required models are `gpt-6-astra`, `gpt-6.1-sol` and `gpt-6-luna`.
+The policy's required models are `gpt-6-astra`, `gpt-6.1-sol`, `gpt-6.1-terra`
+and `gpt-6-luna`.
 Verification reads `models_cache.json` under `CODEX_HOME`, or the user's `.codex`
 directory when that environment variable is absent. An available catalog must
 cover the required nominal capacity and effective percentage for every required

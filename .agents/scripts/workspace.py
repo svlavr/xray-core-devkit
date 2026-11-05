@@ -109,6 +109,7 @@ def repository_guard(selection=None):
 
 
 def validate():
+    from role_profiles import preset_policy
     from language_policy import WORKER_INSTRUCTIONS
     roles = sorted((ROOT / '.codex/agents').glob('*.toml'))
     skills = sorted((ROOT / '.agents/skills').glob('*/SKILL.md'))
@@ -137,6 +138,7 @@ def validate():
             raise RuntimeError('Skill metadata mismatch: ' + str(path))
     if not (ROOT / '.agents/CODEX_PACK.md').is_file():
         raise RuntimeError('Missing toolkit instructions: .agents/CODEX_PACK.md')
+    preset_policy(ROOT)
     return {'skills': len(MANAGED_SKILLS), 'roles': len(MANAGED_ROLES),
             'additional_skills': sorted(path.parent.name for path in skills if path.parent.name not in MANAGED_SKILLS),
             'additional_roles': sorted(path.stem for path in roles if path.stem not in MANAGED_ROLES)}
@@ -146,7 +148,7 @@ def configuration(python, analysis_tools=None, node=None):
     from context_policy import toml_settings
     from language_policy import PRIMARY_INSTRUCTIONS
     quote = lambda value: json.dumps(str(value), ensure_ascii=False)
-    text = toml_settings() + 'developer_instructions = ' + quote(PRIMARY_INSTRUCTIONS) + '\n\n[features]\nmulti_agent_v2 = true\n\n[agents]\nenabled = true\ndefault_subagent_model = "gpt-6.1-sol"\ndefault_subagent_reasoning_effort = "high"\nmax_concurrent_threads_per_session = 23\ninterrupt_message = true\n'
+    text = toml_settings() + 'developer_instructions = ' + quote(PRIMARY_INSTRUCTIONS) + '\n\n[features]\nmulti_agent_v2 = true\ndefer_mailbox_preemption = true\n\n[agents]\nenabled = true\ndefault_subagent_model = "gpt-6.1-sol"\ndefault_subagent_reasoning_effort = "high"\nmax_concurrent_threads_per_session = 23\ninterrupt_message = true\n'
     for role in sorted((ROOT / '.codex/agents').glob('*.toml')):
         if role.stem not in MANAGED_ROLES:
             continue  # Source-owned roles remain available through native discovery.

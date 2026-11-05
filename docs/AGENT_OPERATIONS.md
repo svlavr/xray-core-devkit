@@ -82,7 +82,8 @@ Roles: `mu_explorer` (Luna high); `mu_investigator`,
 `mu_build_qualifier` also use Sol 6.1 high;
 `mu_deep_reviewer` (Astra high, one named unresolved discriminator after Sol).
 The distributed model policy is: `gpt-6-luna` high for narrow
-exploration, `gpt-6.1-sol` high for ordinary roles and external worker defaults,
+exploration, qualified `gpt-6.1-terra` high task presets, `gpt-6.1-sol` high for
+broader ordinary roles and external worker defaults,
 and `gpt-6-astra` high only for one named deep discriminator. Preserve the
 user-selected parent model. Model/effort must be explicit; never inherit Astra
 into the worker pool. Fresh discovery is required for changed native roles.
@@ -92,9 +93,14 @@ the parent through an unrestricted full-history fork. Use the single Gas City
 `mu-deep` pool for automatic Astra escalation; a native deep reviewer is a fallback
 only when that runtime is unavailable and no other Astra adviser is active.
 `orchestration.py dispatch <task.json>` applies `orchestration/models.json`: Luna
-High for bounded lookup, Sol 6.1 High for broader analysis/implementation/review,
+High for bounded lookup, Terra High for a matching initial `task.preset`,
+Sol 6.1 High for broader analysis/implementation/review,
 then one Astra High adviser for a named discriminator still unresolved after Sol.
 Missing inputs/access/environment/test results require evidence, not escalation.
+Read [model routing](MODEL_ROUTING.md) before choosing a preset. Main selects the
+matching bounded scope automatically before the first launch; outside that scope
+retain Sol. Luna/Terra unresolved work returns evidence to main without an
+automatic retry ladder. Frozen old jobs retain their exact assignment and helper.
 After the adviser resolves a question, return implementation to Sol 6.1 High.
 
 Main selects competencies from the actual nineteen maintained profile descriptions,

@@ -365,5 +365,31 @@ version = "sha:exact"
 
 
 
+    def test_retained_single_dispatch_does_not_reapply_new_model_admission(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);state_dir=root/'state';state_dir.mkdir();remote=root/'remote'
+            frozen=remote/'fixture/saved';frozen.mkdir(parents=True)
+            helper=frozen/'role_bootstrap.py';helper.write_bytes(b'old immutable helper')
+            manifest={'role_bootstrap.py':{'sha256':agent_batch.digest(helper.read_bytes())}}
+            (frozen/'manifest.json').write_bytes(agent_batch.encoded(manifest))
+            task={'kind':'explore','bounded':True,'previous_model':'gpt-6-luna','blocker':'unresolved_technical',
+                  'model':'formerly-ignored','title':'Retained original task','body':'Read exact old evidence.'}
+            file=root/'task.json';file.write_text(json.dumps(task))
+            identity='single-'+agent_batch.digest(agent_batch.encoded(task))[:24]
+            packet={'batch_id':identity,'sources':{},'jobs':[{**task,'key':'task','inputs':[]}]}
+            data={'distribution':'fixture','user':'owner','city':'/city'}
+            old={'id':'mc-retained','key':'task','phase':'routed','route':{'model':'gpt-6.1-sol'},'metadata':{}}
+            state={'batch_id':identity,'namespace':agent_batch.namespace(data),'packet_hash':agent_batch.digest(agent_batch.encoded(packet)),
+                'evidence':{'linux':'/saved','files':manifest,'manifest_sha256':agent_batch.digest((frozen/'manifest.json').read_bytes())},'jobs':[old]}
+            (state_dir/(identity+'.json')).write_text(json.dumps(state));real_path=Path
+            with patch.object(agent_batch,'STATE',state_dir), \
+                 patch.object(orchestration,'Path',side_effect=lambda value:remote if value=='//wsl.localhost' else real_path(value)), \
+                 patch('model_router.resolve_assignment',side_effect=AssertionError('Retained task was re-admitted')), \
+                 patch.object(agent_batch,'snapshot',side_effect=AssertionError('Retained helper was rewritten')), \
+                 patch.object(agent_batch,'Native'),patch.object(agent_batch,'enqueue') as enqueue,patch('builtins.print'):
+                self.assertEqual(orchestration.dispatch(data,file),0)
+                self.assertEqual(enqueue.call_args.args[0]['jobs'],[old])
+            self.assertEqual(helper.read_bytes(),b'old immutable helper')
+
 if __name__ == '__main__':
     unittest.main()

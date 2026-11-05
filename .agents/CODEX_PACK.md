@@ -56,7 +56,12 @@ admission is unavailable, use `session.py --role <name> --exec ...` or the bound
 external route within existing authority. No repeated routine approval or new
 chat is needed. Extra source-owned roles/skills remain owner-managed.
 
-Models: `mu_explorer` is Luna high; ordinary roles are Sol 6.1 high;
+Models: `mu_explorer` is Luna high; ordinary role defaults are Sol 6.1 high.
+Main automatically selects a matching bounded Terra high `task.preset` before
+the first launch; read `docs/MODEL_ROUTING.md` and the exact preset scope in
+`.agents/orchestration/model-presets.json`. Broader work retains Sol initially.
+Unresolved Luna/Terra work returns scope/evidence to main without an automatic
+model retry ladder;
 `mu_deep_reviewer` is one Astra high adviser for a named technical discriminator
 still unresolved after Sol. Missing input/access/validation is not escalation.
 Preserve the parent model and explicitly bind routed model/effort/profile/skills

@@ -1,0 +1,124 @@
+{
+  "schema": 1,
+  "selection": "Explicit initial task.preset selected semantically by the coordinator; no task-text classifier or automatic retry ladder.",
+  "limits": "These five owner-approved bounded scopes do not promote whole roles or replace source/runtime/device/release acceptance. Public qualification uses synthetic fixtures and exact consumer evidence.",
+  "presets": {
+    "native-write-fix": {
+      "role": "mu_go_worker",
+      "kinds": [
+        "implement"
+      ],
+      "model": "gpt-6.1-terra",
+      "effort": "high",
+      "scope": "An accepted, bounded existing native writer fix with explicit partial-write, error, counter and custody contracts and exact owned paths. Excludes new architecture, cross-owner changes and broad runtime qualification.",
+      "acceptance": [
+        "Exercise the exported helper through its real consumer, including positive short writes, n>0 with error and no progress.",
+        "Preserve accepted-byte accounting, payload identity, writer ownership and nil/empty-input behavior.",
+        "Report actual checks and limits; the fixture does not authorize an unrelated product change or device/release claim."
+      ],
+      "evidence": {
+        "type": "bounded-public-consumer-fixture",
+        "references": [
+          "docs/MODEL_ROUTING.md",
+          "docs/PROJECT_SCOPE.md",
+          "docs/MAINTENANCE.md"
+        ],
+        "limits": "Verify the actual task consumer and frozen selection; no general model-superiority or broader role-default claim."
+      }
+    },
+    "native-accounting-review": {
+      "role": "mu_reviewer",
+      "kinds": [
+        "review"
+      ],
+      "model": "gpt-6.1-terra",
+      "effort": "high",
+      "scope": "Read-only review of bounded existing native writer differences against explicit counter, receipt, error and ownership contracts. Excludes arbitrary source review, cross-owner security/concurrency and runtime-wide acceptance.",
+      "acceptance": [
+        "Tie each finding to a changed path, trigger, observed effect and required correction.",
+        "Identify supported clean candidates and preserve native batching and accepted-byte boundaries.",
+        "Distinguish source tests from executed checks and retain unresolved limits."
+      ],
+      "evidence": {
+        "type": "bounded-public-consumer-fixture",
+        "references": [
+          "docs/MODEL_ROUTING.md",
+          "docs/PROJECT_SCOPE.md",
+          "docs/MAINTENANCE.md"
+        ],
+        "limits": "Verify the actual task consumer and frozen selection; no general model-superiority or broader role-default claim."
+      }
+    },
+    "delivery-evidence-review": {
+      "role": "mu_behavior_reviewer",
+      "kinds": [
+        "review"
+      ],
+      "model": "gpt-6.1-terra",
+      "effort": "high",
+      "scope": "Read-only adjudication of bounded tooling/native-source-host receipts through exact caller, result, source-root and generation evidence. Excludes whole-runtime behavior, device and release qualification.",
+      "acceptance": [
+        "Classify each package from its actual call/result/root evidence, including conflicting or missing fields.",
+        "Separate configured identity from observed execution and historical or mutated traces from fresh runs.",
+        "Name the smallest concrete consumer check for unsupported claims; do not learn acceptance from polished prose."
+      ],
+      "evidence": {
+        "type": "bounded-public-consumer-fixture",
+        "references": [
+          "docs/MODEL_ROUTING.md",
+          "docs/PROJECT_SCOPE.md",
+          "docs/MAINTENANCE.md"
+        ],
+        "limits": "Verify the actual task consumer and frozen selection; no general model-superiority or broader role-default claim."
+      }
+    },
+    "tool-update-evidence": {
+      "role": "mu_upstream_researcher",
+      "kinds": [
+        "review",
+        "explore"
+      ],
+      "model": "gpt-6.1-terra",
+      "effort": "high",
+      "scope": "Bounded dependency/runtime-tool update evidence with exact versions, source behavior and retained compatibility boundaries. Excludes upstream runtime merge approval, cross-owner changes and broad upgrade research.",
+      "acceptance": [
+        "Keep version-specific behavior, compatibility retention and exact artifact identities distinct.",
+        "Report contradictions, chronology, unavailable license facts and the next actual consumer check.",
+        "Do not install, remove compatibility or widen platform claims without the task's separate authority and evidence."
+      ],
+      "evidence": {
+        "type": "bounded-public-consumer-fixture",
+        "references": [
+          "docs/MODEL_ROUTING.md",
+          "docs/PROJECT_SCOPE.md",
+          "docs/MAINTENANCE.md"
+        ],
+        "limits": "Verify the actual task consumer and frozen selection; no general model-superiority or broader role-default claim."
+      }
+    },
+    "existing-writer-solution": {
+      "role": "mu_solution_researcher",
+      "kinds": [
+        "review",
+        "explore"
+      ],
+      "model": "gpt-6.1-terra",
+      "effort": "high",
+      "scope": "Bounded selection among existing/native/direct writer APIs for decoded-byte receipts, identity, batching and partial-write behavior. Excludes arbitrary architecture, cross-owner mechanisms and new capability delivery.",
+      "acceptance": [
+        "Map each supplied writer case to a supported operation or an honest unsupported outcome.",
+        "Preserve writer identity, prior buffered-byte boundaries and actual accepted-byte credit.",
+        "Compare complete alternatives and name deciding consumer checks without treating source inspection as execution."
+      ],
+      "evidence": {
+        "type": "bounded-public-consumer-fixture",
+        "references": [
+          "docs/MODEL_ROUTING.md",
+          "docs/PROJECT_SCOPE.md",
+          "docs/MAINTENANCE.md"
+        ],
+        "limits": "Verify the actual task consumer and frozen selection; no general model-superiority or broader role-default claim."
+      }
+    }
+  }
+}
